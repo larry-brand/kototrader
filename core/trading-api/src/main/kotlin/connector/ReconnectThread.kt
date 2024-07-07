@@ -33,9 +33,10 @@ class ReconnectThread(val connector: InternalTerminalConnector) : Runnable {
             try {
                 // wait 5 sec and check connection status again and again
                 Thread.sleep(5000)
+                //logger.debug { "try reconnect again, 5 sec" }
             } catch (e: InterruptedException) {
-                logger.warn("Connection thread interrupted, exit ")
-                return
+                //logger.debug { "Connection thread interrupted, exit " }
+                //return
             }
         }
     }

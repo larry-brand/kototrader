@@ -10,6 +10,7 @@ import org.cryptolosers.transaq.xml.callback.*
 import java.util.*
 import javax.xml.bind.JAXBContext
 import javax.xml.bind.JAXBException
+import kotlin.math.absoluteValue
 
 class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
 
@@ -130,16 +131,19 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
         val thisNewPositions: MutableList<Position> = ArrayList<Position>()
         for (p in memory.secPositionMap) {
             if (p.value.saldo != 0L) {
-                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.saldo))
+                val pType = if (p.value.saldo > 0) PositionType.LONG else PositionType.SHORT
+                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.saldo.absoluteValue, pType))
             }
         }
         for (p in memory.fortsPositionMap) {
             if (p.value.totalnet != 0L) {
-                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.totalnet))
+                val pType = if (p.value.totalnet > 0) PositionType.LONG else PositionType.SHORT
+                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.totalnet.absoluteValue, pType))
             }
         }
         for (m in memory.moneyPositionMap) {
-            thisNewPositions.add(Position(Ticker(m.key.symbol, m.key.exchange), m.value.saldo.toLong()))
+            val pType = if (m.value.saldo.toLong() > 0) PositionType.LONG else PositionType.SHORT
+            thisNewPositions.add(Position(Ticker(m.key.symbol, m.key.exchange), m.value.saldo.toLong().absoluteValue, pType))
         }
         for (u in memory.unitedLimits) {
             val newWallet = Wallet(

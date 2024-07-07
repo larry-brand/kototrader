@@ -13,8 +13,9 @@ data class TickerInfo (
 typealias SymbolName = String
 typealias ExchangeName = String
 
-val MOEX_Exchange: ExchangeName = "MOEX"
-val NASDAQ_Exchange: ExchangeName = "NASDAQ"
-val NYSE_Exchange: ExchangeName = "NYSE"
+val Exchange_MOEX: ExchangeName = "MOEX"
+val Exchange_MOEX_FORTS: ExchangeName = "FORTS"
+val Exchange_NASDAQ: ExchangeName = "NASDAQ"
+val Exchange_NYSE: ExchangeName = "NYSE"
 
 typealias InstrumentType = String

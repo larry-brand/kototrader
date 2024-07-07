@@ -3,16 +3,7 @@ package org.cryptolosers.trading.model
 import java.math.BigDecimal
 import java.time.Instant
 
-data class Position(val ticker: Ticker, var size: Long, var openPrice: BigDecimal? = null) {
-    fun getType(): PositionType {
-        return if (size > 0) {
-            PositionType.LONG
-        } else if (size < 0) {
-            PositionType.SHORT
-        } else {
-            throw IllegalStateException()
-        }
-    }
+data class Position(val ticker: Ticker, var size: Long, var positionType: PositionType, var openPrice: BigDecimal? = null) {
 }
 
 enum class PositionType {

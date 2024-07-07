@@ -14,7 +14,7 @@ class OrdersHandler(val memory: TransaqMemory) {
         runCatching {
             handleInternal(orders)
         }.getOrElse {
-            logger.error { "Can not handle orders" }
+            logger.error(it) { "Can not handle orders" }
         }
     }
 

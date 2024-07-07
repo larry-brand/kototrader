@@ -5,8 +5,6 @@ import org.cryptolosers.trading.model.InstrumentType
 import org.cryptolosers.trading.model.PriceInfo
 import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.TickerInfo
-import org.cryptolosers.transaq.connector.concurrent.Transaction
-import org.cryptolosers.transaq.xml.callback.internal.Order
 import java.math.BigDecimal
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -52,7 +50,9 @@ data class SecCodeBoard(
 )
 
 data class TransaqPriceInfo(
-    var priceInfo: PriceInfo,
+    var priceInfo: PriceInfo? = null,
+    @Volatile
+    var subscribed: Boolean = false,
     private val lock: Lock = ReentrantLock(),
     private val condition: Condition = lock.newCondition()
 
@@ -60,11 +60,15 @@ data class TransaqPriceInfo(
     fun await(): PriceInfo {
         lock.lock()
         try {
-            condition.await(30, TimeUnit.SECONDS)
+            condition.await(4, TimeUnit.SECONDS)
         } catch (e: InterruptedException) {
             logger.error(e) { "PriceInfo was interrupted" }
         }
-        return priceInfo
+        return priceInfo ?: throw IllegalStateException("Can not get price info, it is not filled in subscription")
+    }
+
+    fun getFilledPriceInfo(): PriceInfo {
+        return priceInfo ?: throw IllegalStateException("Can not get price info, it is not filled in subscription")
     }
 
     companion object {

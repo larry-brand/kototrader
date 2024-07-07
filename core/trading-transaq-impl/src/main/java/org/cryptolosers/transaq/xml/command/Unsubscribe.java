@@ -10,11 +10,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class Unsubscribe {
     private String id = "unsubscribe";
     /** подписка на сделки рынка */
-    private Subscrube.Alltrades alltrades;
+    private Subscribe.Alltrades alltrades;
     /** подписка на изменения показателей торгов */
-    private Subscrube.Quotations quotations;
+    private Subscribe.Quotations quotations;
     /** подписка на изменения «стакана» */
-    private Subscrube.Quotes quotes;
+    private Subscribe.Quotes quotes;
 
     public String getId() {
         return id;
@@ -25,27 +25,27 @@ public class Unsubscribe {
         this.id = id;
     }
 
-    public Subscrube.Alltrades getAlltrades() {
+    public Subscribe.Alltrades getAlltrades() {
         return alltrades;
     }
 
-    public void setAlltrades(Subscrube.Alltrades alltrades) {
+    public void setAlltrades(Subscribe.Alltrades alltrades) {
         this.alltrades = alltrades;
     }
 
-    public Subscrube.Quotations getQuotations() {
+    public Subscribe.Quotations getQuotations() {
         return quotations;
     }
 
-    public void setQuotations(Subscrube.Quotations quotations) {
+    public void setQuotations(Subscribe.Quotations quotations) {
         this.quotations = quotations;
     }
 
-    public Subscrube.Quotes getQuotes() {
+    public Subscribe.Quotes getQuotes() {
         return quotes;
     }
 
-    public void setQuotes(Subscrube.Quotes quotes) {
+    public void setQuotes(Subscribe.Quotes quotes) {
         this.quotes = quotes;
     }
 }

@@ -6,6 +6,7 @@ import org.cryptolosers.transaq.SecCodeBoard
 import org.cryptolosers.transaq.TransaqMemory
 import org.cryptolosers.transaq.TransaqPriceInfo
 import org.cryptolosers.transaq.xml.callback.Quotations
+import java.math.BigDecimal
 
 class QuotationsHandler(val memory: TransaqMemory) {
     private val logger = KotlinLogging.logger {}
@@ -14,7 +15,7 @@ class QuotationsHandler(val memory: TransaqMemory) {
         runCatching {
             handleInternal(quotations)
         }.getOrElse {
-            logger.error { "Can not handle quotations" }
+            logger.error(it) { "Can not handle quotations" }
         }
     }
 
@@ -25,11 +26,12 @@ class QuotationsHandler(val memory: TransaqMemory) {
                 board = quotations.quotation.board
             )]!!.tickerInfo.ticker
             val price = PriceInfo(
-                lastPrice = quotations.quotation.last,
+                lastPrice = quotations.quotation.last ?: quotations.quotation.offer, //quotations.quotation.last can be null
                 bidPrice = quotations.quotation.bid,
                 askPrice = quotations.quotation.offer
             )
             memory.priceMap[ticker]!!.priceInfo = price
+            memory.priceMap[ticker]!!.subscribed = true
             TransaqPriceInfo.signalAll(ticker, memory)
         }
     }

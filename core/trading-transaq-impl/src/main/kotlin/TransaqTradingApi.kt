@@ -5,9 +5,8 @@ import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.checkResult
 import org.cryptolosers.transaq.connector.jna.TXmlConnector
-import org.cryptolosers.transaq.xml.command.Subscrube
+import org.cryptolosers.transaq.xml.command.Subscribe
 import org.cryptolosers.transaq.xml.command.internal.Security
-import java.math.BigDecimal
 import java.time.Instant
 
 class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
@@ -18,21 +17,25 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
 
     override suspend fun getPrice(ticker: Ticker): PriceInfo {
         val tickerInfo = memory.tickerMap[ticker] ?: throw IllegalStateException("Can not find ticker")
-        if (memory.priceMap[ticker] == null) {
-            memory.priceMap[ticker] = TransaqPriceInfo(PriceInfo(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO))
-        }
-        val subscrube = Subscrube()
-        val quotations = Subscrube.Quotations()
+        memory.priceMap.computeIfAbsent(ticker) { TransaqPriceInfo() }
+        val subscribe = Subscribe()
+        val quotations = Subscribe.Quotations()
         val security = Security()
         security.seccode = tickerInfo.secCode
         security.board = tickerInfo.board
         quotations.security = listOf(security)
-        subscrube.quotations = quotations
+        subscribe.quotations = quotations
 
-        val subscrubeXml = JAXBUtils.marshall(subscrube)
-        val subscrubeResultXml = TXmlConnector.sendCommand(subscrubeXml)
-        checkResult(subscrubeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
-        return memory.priceMap[ticker]!!.await()
+        val subscribeXml = JAXBUtils.marshall(subscribe)
+        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
+        checkResult(subscribeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
+
+        val price = memory.priceMap[ticker]!!
+        if (!price.subscribed) {
+            return price.await()
+        } else {
+            return price.getFilledPriceInfo()
+        }
     }
 
     override suspend fun getOrderBook(ticker: Ticker): OrderBook {
@@ -76,6 +79,6 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
     }
 
     override suspend fun getWallet(): Wallet {
-        TODO("Not yet implemented")
+        return memory.wallet.get()
     }
 }

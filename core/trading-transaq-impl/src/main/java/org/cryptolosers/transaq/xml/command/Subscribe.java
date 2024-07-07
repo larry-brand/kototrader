@@ -11,7 +11,7 @@ import java.util.List;
  * Команда "subscribe" , подписаться на получение котировок, сделок и глубины рынка (стакана) по
  * одному или нескольким инструментам. */
 @XmlRootElement(name = "command")
-public class Subscrube {
+public class Subscribe {
     private String id = "subscribe";
     /** подписка на сделки рынка */
     private Alltrades alltrades;

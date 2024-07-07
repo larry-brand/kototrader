@@ -34,11 +34,12 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
     override suspend fun sendOrder(order: IOrder) {
         if (order is MarketOrder) {
             if (positionBR == null) { // new position
-                var sizeSign = order.size
-                if (order.orderDirection == OrderDirection.SELL) {
-                    sizeSign = -order.size
+                val pType = if (order.orderDirection == OrderDirection.SELL) {
+                    PositionType.SHORT
+                } else {
+                    PositionType.LONG
                 }
-                positionBR = Position(order.ticker, sizeSign, nowPrice)
+                positionBR = Position(order.ticker, order.size, pType, nowPrice)
                 wallet.balance -= (getPrice(order.ticker).lastPrice * order.size.toBigDecimal()).abs()
             } else {
                 var orderSizeWithSigh = order.size
