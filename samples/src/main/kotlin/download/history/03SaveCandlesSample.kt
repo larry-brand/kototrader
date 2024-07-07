@@ -1,4 +1,4 @@
-package org.cryptolosers.samples
+package org.cryptolosers.samples.download.history
 
 import com.google.gson.Gson
 import org.cryptolosers.history.*

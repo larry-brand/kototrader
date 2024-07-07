@@ -1,4 +1,4 @@
-package org.cryptolosers.samples
+package org.cryptolosers.samples.download.history
 
 import org.cryptolosers.history.HistoryService
 import org.cryptolosers.history.HistoryTickerId

@@ -38,12 +38,12 @@ suspend fun main() {
                 println(it)
             }
 
-            conn.tradingApi().subscribePriceChanges(Ticker("BRJ5", Exchange_MOEX_FORTS)) {
+            conn.tradingApi().subscribePriceChanges(tickers.first().ticker) {
                 println("Subscribed $it")
             }
 
 //            println("Price:")
-//            conn.tradingApi().getPrice(Ticker("BRJ5", Exchange_MOEX_FORTS)).let {
+//            conn.tradingApi().getPrice(tickers.first().ticker).let {
 //                println(it)
 //            }
         }

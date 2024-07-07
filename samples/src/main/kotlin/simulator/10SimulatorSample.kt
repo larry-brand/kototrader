@@ -1,4 +1,4 @@
-package org.cryptolosers.samples
+package org.cryptolosers.samples.simulator
 
 import kotlinx.coroutines.runBlocking
 import org.cryptolosers.commons.printSuccess
