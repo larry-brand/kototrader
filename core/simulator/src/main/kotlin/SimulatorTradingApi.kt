@@ -23,6 +23,10 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         return PriceInfo(nowPrice, nowPrice, nowPrice)
     }
 
+    override suspend fun subscribePriceChanges(ticker: Ticker, priceChangesListener: (PriceInfo) -> Unit) {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun getOrderBook(ticker: Ticker): OrderBook {
         TODO("Not yet implemented")
     }

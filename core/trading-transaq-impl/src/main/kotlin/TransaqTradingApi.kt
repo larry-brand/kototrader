@@ -6,6 +6,7 @@ import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.checkResult
 import org.cryptolosers.transaq.connector.jna.TXmlConnector
 import org.cryptolosers.transaq.xml.command.Subscribe
+import org.cryptolosers.transaq.xml.command.Unsubscribe
 import org.cryptolosers.transaq.xml.command.internal.Security
 import java.time.Instant
 
@@ -31,11 +32,22 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         checkResult(subscribeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
 
         val price = memory.priceMap[ticker]!!
-        if (!price.subscribed) {
-            return price.await()
+        val result = if (!price.subscribed) {
+            price.await()
         } else {
-            return price.getFilledPriceInfo()
+            price.getFilledPriceInfo()
         }
+
+        val unsubscribe = Unsubscribe()
+        unsubscribe.quotations = quotations
+        val unsubscribeXml = JAXBUtils.marshall(unsubscribe)
+        val unsubscribeResultXml = TXmlConnector.sendCommand(unsubscribeXml)
+        checkResult(unsubscribeResultXml, "UNSUBSCRIBE PRICE (QUITATIONS)")
+        return result
+    }
+
+    override suspend fun subscribePriceChanges(ticker: Ticker, priceChangesListener: (PriceInfo) -> Unit) {
+        TODO("Not yet implemented")
     }
 
     override suspend fun getOrderBook(ticker: Ticker): OrderBook {

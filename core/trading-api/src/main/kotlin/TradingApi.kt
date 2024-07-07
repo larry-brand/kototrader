@@ -11,6 +11,7 @@ interface TradingApi {
 
     /** quotes data */
     suspend fun getPrice(ticker: Ticker): PriceInfo
+    suspend fun subscribePriceChanges(ticker: Ticker, priceChangesListener: (PriceInfo) -> Unit)
     suspend fun getOrderBook(ticker: Ticker): OrderBook
     suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant)
 

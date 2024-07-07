@@ -60,7 +60,7 @@ data class TransaqPriceInfo(
     fun await(): PriceInfo {
         lock.lock()
         try {
-            condition.await(4, TimeUnit.SECONDS)
+            condition.await(10, TimeUnit.SECONDS)
         } catch (e: InterruptedException) {
             logger.error(e) { "PriceInfo was interrupted" }
         }
