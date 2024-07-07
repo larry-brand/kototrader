@@ -5,9 +5,9 @@ import org.cryptolosers.trading.model.Candle
 import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.SecCodeBoard
 import org.cryptolosers.transaq.TickerTimeframe
+import org.cryptolosers.transaq.TransaqCandles
 import org.cryptolosers.transaq.TransaqMemory
 import org.cryptolosers.transaq.xml.callback.Candles
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -37,7 +37,7 @@ class CandlesHandler(val memory: TransaqMemory) {
         }
         val tickerTimeframe = TickerTimeframe(ticker = ticker, timeframe = timeframe)
         memory.candlesMap.computeIfAbsent(tickerTimeframe) {
-            mutableListOf()
+            TransaqCandles(mutableListOf())
         }
 
         val candlesMapped = candles.candle.mapNotNull {
@@ -54,6 +54,13 @@ class CandlesHandler(val memory: TransaqMemory) {
                 )
             }.getOrDefault(null)
         }
-        memory.candlesMap[tickerTimeframe]!!.addAll(candlesMapped)
+
+        val memoryCandles = memory.candlesMap[tickerTimeframe]!!
+        memoryCandles.candles.addAll(candlesMapped)
+
+        // статус 2 это продолжение следует (будет еще порция)
+        if (candles.status != 2L ) {
+            TransaqCandles.signalAll(tickerTimeframe, memory)
+        }
     }
 }

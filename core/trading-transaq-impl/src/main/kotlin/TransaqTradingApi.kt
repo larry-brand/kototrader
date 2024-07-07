@@ -1,5 +1,6 @@
 package org.cryptolosers.transaq
 
+import mu.KotlinLogging
 import org.cryptolosers.commons.utils.JAXBUtils
 import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
@@ -14,6 +15,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
+
+    private val logger = KotlinLogging.logger {}
 
     override suspend fun getAllTickers(): List<TickerInfo> {
         return memory.tickerMap.values.map{ it.tickerInfo }.toList()
@@ -72,29 +75,30 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
 
         // clear candles in memory because reset = true
         val tickerTimeframe = TickerTimeframe(ticker = ticker, timeframe = timeframe)
-        val candlesBefore = memory.candlesMap[tickerTimeframe]
-        if (candlesBefore != null) {
-            memory.candlesMap[tickerTimeframe] = null
+        memory.candlesMap.computeIfAbsent(tickerTimeframe) {
+            TransaqCandles(mutableListOf())
         }
+        memory.candlesMap[tickerTimeframe]!!.candles.clear()
 
         val subscribeXml = JAXBUtils.marshall(getHistoryData)
         val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
         checkResult(subscribeResultXml, "GET CANDLES (GET HISTORY DATA)")
 
 
-        Thread.sleep(3000) //TODO
-        val candles = memory.candlesMap[tickerTimeframe]!!
-        if (candles.size >= candlesCount) {
-            when (session) {
-                Session.CURRENT_AND_PREVIOUS -> return candles.takeLast(candlesCount)
-                Session.CURRENT -> {
-                    val now = LocalDateTime.now(ZoneId.of("Europe/Moscow"))
-                    val sessionStarted = now.withHour(10).withMinute(0)
-                    return candles.takeLast(candlesCount).filter { it.timestamp >= sessionStarted }
-                }
-            }
+        val candles = memory.candlesMap[tickerTimeframe]!!.await()
+        val takeSize = if (candles.size >= candlesCount) {
+            candles.size
         } else {
-            throw IllegalStateException("Can not load candles, probably invalid size")
+            logger.warn { "Can not load candles with requested size, probably invalid size" }
+            candlesCount
+        }
+        when (session) {
+            Session.CURRENT_AND_PREVIOUS -> return candles.takeLast(takeSize)
+            Session.CURRENT -> {
+                val now = LocalDateTime.now(ZoneId.of("Europe/Moscow"))
+                val sessionStarted = now.withHour(10).withMinute(0)
+                return candles.takeLast(candlesCount).filter { it.timestamp >= sessionStarted }
+            }
         }
 
     }

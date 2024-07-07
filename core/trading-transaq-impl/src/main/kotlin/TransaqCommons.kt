@@ -85,4 +85,31 @@ data class TickerTimeframe(
     val timeframe: Timeframe
 )
 
+data class TransaqCandles(
+    val candles: MutableList<Candle>,
+    private val lock: Lock = ReentrantLock(),
+    private val condition: Condition = lock.newCondition()
+) {
+    fun await(): MutableList<Candle> {
+        lock.lock()
+        try {
+            condition.await(10, TimeUnit.SECONDS)
+        } catch (e: InterruptedException) {
+            logger.error(e) { "Candles was interrupted" }
+        }
+        return candles
+    }
+
+    companion object {
+        fun signalAll(tickerTimeframe: TickerTimeframe, memory: TransaqMemory) {
+            val candlesMemory = memory.candlesMap[tickerTimeframe]
+            if (candlesMemory != null) {
+                candlesMemory.lock.lock()
+                candlesMemory.condition.signalAll()
+                candlesMemory.lock.unlock()
+            }
+        }
+    }
+}
+
 private val logger = KotlinLogging.logger {}

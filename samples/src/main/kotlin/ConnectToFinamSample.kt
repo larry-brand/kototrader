@@ -45,7 +45,7 @@ suspend fun main() {
             }
 
             println("LastCandles:")
-            conn.tradingApi().getLastCandles(Ticker("SiU4", Exchange_MOEX_FORTS), Timeframe.MIN5, 10, Session.CURRENT).forEach {
+            conn.tradingApi().getLastCandles(Ticker("SiU4", Exchange_MOEX_FORTS), Timeframe.MIN5, 3, Session.CURRENT_AND_PREVIOUS).forEach {
                 println(it)
             }
 
