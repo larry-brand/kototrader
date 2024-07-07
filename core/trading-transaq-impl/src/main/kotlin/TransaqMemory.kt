@@ -1,9 +1,6 @@
 package org.cryptolosers.transaq
 
-import org.cryptolosers.trading.model.OrderBook
-import org.cryptolosers.trading.model.Position
-import org.cryptolosers.trading.model.Ticker
-import org.cryptolosers.trading.model.Wallet
+import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.Transaction
 import org.cryptolosers.transaq.xml.callback.*
 import org.cryptolosers.transaq.xml.callback.internal.FortsPosition
@@ -23,9 +20,11 @@ class TransaqMemory {
     // not technical
     var markets: ConcurrentMap<Long, Markets.Market> = ConcurrentHashMap()
     var boards: MutableList<Boards.Board> = CopyOnWriteArrayList()
+    var tickerSecCodeMarketMap: MutableMap<SecCodeMarket, TransaqTickerInfo> = ConcurrentHashMap()
+    var tickerSecCodeBoardMap: MutableMap<SecCodeBoard, TransaqTickerInfo> = ConcurrentHashMap()
     var tickerMap: MutableMap<Ticker, TransaqTickerInfo> = ConcurrentHashMap()
 
-    var priceMap: ConcurrentMap<Ticker, BigDecimal> = ConcurrentHashMap()
+    var priceMap: ConcurrentMap<Ticker, TransaqPriceInfo> = ConcurrentHashMap()
     var orderBookMap: ConcurrentMap<Ticker, OrderBook> = ConcurrentHashMap()
 
     var clients: MutableList<Client> = CopyOnWriteArrayList()
@@ -40,6 +39,7 @@ class TransaqMemory {
     var unitedLimits: MutableList<UnitedLimits> = CopyOnWriteArrayList()
 
     var orders: AtomicReference<Orders> = AtomicReference(Orders())
+    var ordersMapped: AtomicReference<List<IOrder>> = AtomicReference(ArrayList())
     var transactions: AtomicReference<Transactions> = AtomicReference(Transactions())
 
     fun reset() {

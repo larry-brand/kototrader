@@ -19,8 +19,8 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getPrice(ticker: Ticker): BigDecimal {
-        return nowPrice
+    override suspend fun getPrice(ticker: Ticker): PriceInfo {
+        return PriceInfo(nowPrice, nowPrice, nowPrice)
     }
 
     override suspend fun getOrderBook(ticker: Ticker): OrderBook {
@@ -39,7 +39,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
                     sizeSign = -order.size
                 }
                 positionBR = Position(order.ticker, sizeSign, nowPrice)
-                wallet.balance -= (getPrice(order.ticker) * order.size.toBigDecimal()).abs()
+                wallet.balance -= (getPrice(order.ticker).lastPrice * order.size.toBigDecimal()).abs()
             } else {
                 var orderSizeWithSigh = order.size
                 if (order.orderDirection == OrderDirection.SELL) {
@@ -96,7 +96,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
 
     override suspend fun getWallet(): Wallet {
         if (positionBR != null)
-            wallet.equity = wallet.balance + (getPrice(positionBR!!.ticker) * positionBR!!.size.toBigDecimal()).abs()
+            wallet.equity = wallet.balance + (getPrice(positionBR!!.ticker).lastPrice * positionBR!!.size.toBigDecimal()).abs()
         return wallet
     }
 }

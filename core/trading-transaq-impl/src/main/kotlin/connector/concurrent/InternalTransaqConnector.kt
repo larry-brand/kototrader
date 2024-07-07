@@ -56,15 +56,8 @@ class InternalTransaqConnector: InternalTerminalConnector {
                 val connectXml = JAXBUtils.marshall(connect)
                 logger.printNeutral { "CONNECTING to $file , please wait..." }
                 val resultXml: String = TXmlConnector.sendCommand(connectXml)
-                val result =
-                    JAXBUtils.unmarshall(
-                        resultXml,
-                        org.cryptolosers.transaq.xml.misc.Result::class.java
-                    )
-                if (result.success == null || result.success == false) {
-                    logger.printFail { "CONNECTION FAILED , Transaq.Result is not successful" }
-                    throw IllegalStateException()
-                }
+
+                checkResult(resultXml, "CONNECTION")
 
                 // get xml serverStatus from callback
                 val serverStatus: ServerStatus =
@@ -122,19 +115,23 @@ class InternalTransaqConnector: InternalTerminalConnector {
         changePass.newpass = newPassword
         val changePassXml = JAXBUtils.marshall(changePass)
         val changePassResultXml = TXmlConnector.sendCommand(changePassXml)
-
-        val result =
-            JAXBUtils.unmarshall(
-                changePassResultXml,
-                org.cryptolosers.transaq.xml.misc.Result::class.java
-            )
-        if (result.success == null || result.success == false) {
-            logger.printFail { "CHANGE PASSWORD FAILED , Transaq.Result is not successful" }
-            throw IllegalStateException()
-        }
+        checkResult(changePassResultXml, "CHANGE PASSWORD")
     }
 
     override fun tradingApi(): TradingApi {
         return tradingApi
     }
 }
+
+fun checkResult(resultXml: String, commandName: String) {
+    val result =
+        JAXBUtils.unmarshall(
+            resultXml,
+            org.cryptolosers.transaq.xml.misc.Result::class.java
+        )
+    if (result.success == null || result.success == false) {
+        logger.printFail { "$commandName FAILED , Transaq.Result is not successful" }
+        throw IllegalStateException()
+    }
+}
+private val logger = KotlinLogging.logger {}

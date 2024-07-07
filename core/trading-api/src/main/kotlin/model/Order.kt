@@ -23,6 +23,14 @@ data class MarketOrder(
     override val orderId: String? = null
 ) : AbstractOrder(ticker, size, orderDirection, orderId)
 
+data class LimitOrder(
+    override val ticker: Ticker,
+    override val size: Long,
+    override val orderDirection: OrderDirection,
+    override val orderId: String? = null,
+    val price: BigDecimal
+) : AbstractOrder(ticker, size, orderDirection, orderId)
+
 data class StopOrder(
     override val ticker: Ticker,
     override val size: Long,
@@ -37,7 +45,7 @@ data class TakeprofitOrder(
     override val size: Long,
     override val orderDirection: OrderDirection,
     val activationPrice: BigDecimal,
-    val slippage: BigDecimal,
+    //TODO: добавить поля: коррекция, защитный спред
     override val orderId: String? = null
 ) : AbstractOrder(ticker, size, orderDirection, orderId)
 

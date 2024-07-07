@@ -3,14 +3,18 @@ package org.cryptolosers.transaq
 import mu.KotlinLogging
 import org.cryptolosers.commons.utils.JAXBUtils
 import org.cryptolosers.trading.model.*
-import org.cryptolosers.transaq.connector.concurrent.Transaction
 import org.cryptolosers.transaq.connector.jna.TCallback
+import org.cryptolosers.transaq.handlers.OrdersHandler
+import org.cryptolosers.transaq.handlers.QuotationsHandler
 import org.cryptolosers.transaq.xml.callback.*
 import java.util.*
 import javax.xml.bind.JAXBContext
 import javax.xml.bind.JAXBException
 
 class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
+
+    private val ordersHandler = OrdersHandler(memory)
+    private val quotationsHandler = QuotationsHandler(memory)
 
     override fun invoke(response: String) {
         try {
@@ -42,11 +46,11 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
             } else if (resp is PortfolioTplus) { //Клиентский портфель Т+
                 memory.portfolioTpluses.set(resp)
             } else if (resp is Quotes) { //Глубина рынка по инструменту(ам), т.е. стакан
-                //handleQuotes(resp)
+                //quotesHandler.handle(quotesHandler)
             } else if (resp is Quotations) { //Котировки по инструменту(ам)
-                //handleQuotations(resp)
+                quotationsHandler.handle(resp)
             } else if (resp is Orders) { //Заявка(и) клиента
-                handleOrders(resp)
+                ordersHandler.handle(resp)
             } else if (resp is Messages) {
                 logger.info { resp.toString() }
             }
@@ -74,10 +78,21 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
                 // инструмента между сессиями является Seccode+Market
                 val marketName = memory.markets[s.market!!.toLong()]!!.market!!
                 val key = Ticker(symbol = s.seccode, exchange = marketName)
-//                val currency = Currency.getInstance("RUB") // TODO
+                val info = TickerInfo(ticker = key, shortDescription = s.shortname!!, type = s.sectype!!)
 
-                val info = TickerInfo(key, s.shortname!!, s.sectype!!)
-                memory.tickerMap[key] = TransaqTickerInfo(info, s.decimals!!, s.minstep!!, s.lotsize!!, s.point_cost!!)
+                val transaqInfo = TransaqTickerInfo(
+                    tickerInfo = info,
+                    secCode = s.seccode!!,
+                    market = s.market!!,
+                    board = s.board!!,
+                    decimals = s.decimals!!,
+                    minstep = s.minstep!!,
+                    lotSize = s.lotsize!!,
+                    pointCost = s.point_cost!!
+                )
+                memory.tickerMap[key] = transaqInfo
+                memory.tickerSecCodeMarketMap[SecCodeMarket(secCode = s.seccode!!, market = s.market!!.toLong())] = transaqInfo
+                memory.tickerSecCodeBoardMap[SecCodeBoard(secCode = s.seccode!!, board = s.board)] = transaqInfo
             } catch (e: RuntimeException) {
                 logger.error(e) { "Can not handle security $s" }
             }
@@ -88,22 +103,22 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
         val positions: Positions = responseObj as Positions
         if (positions.sec_position != null) {
             for (p in positions.sec_position) {
-                memory.markets[p.market]?.let {
-                    memory.secPositionMap.put(Ticker(p.seccode, it.market), p)
+                memory.tickerSecCodeMarketMap[SecCodeMarket(secCode = p.seccode, market = p.market)]?.let {
+                    memory.secPositionMap.put(it.tickerInfo.ticker, p)
                 }
             }
         }
         if (positions.forts_position != null) {
             for (p in positions.forts_position) {
-                memory.markets[p.markets.markets.first().markets]?.let {
-                    memory.fortsPositionMap.put(Ticker(p.seccode, it.market), p)
+                memory.tickerSecCodeMarketMap[SecCodeMarket(secCode = p.seccode, market = p.markets.markets.first().markets)]?.let {
+                    memory.fortsPositionMap.put(it.tickerInfo.ticker, p)
                 }
             }
         }
         if (positions.money_position != null) {
             for (p in positions.money_position) {
-                memory.markets[p.markets.market.first().market]?.let {
-                    memory.moneyPositionMap.put(Ticker(p.asset, it.market), p)
+                memory.tickerSecCodeMarketMap[SecCodeMarket(secCode = p.asset, market = p.markets.market.first().market)]?.let {
+                    memory.moneyPositionMap.put(it.tickerInfo.ticker, p)
                 }
             }
         }
@@ -206,63 +221,6 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
 //        }
 //    }
 //
-
-    private fun handleOrders(responseObj: Any) {
-        val orders: Orders = responseObj as Orders
-        val memoryOrders = memory.orders.get()
-        if (orders.order != null) {
-            for ((oIndex, o) in orders.order.withIndex()) {
-                for (mo in memoryOrders.order) {
-                    if (o.orderno == mo.orderno) {
-                        memoryOrders.order[oIndex] = o
-                    }
-                }
-            }
-        }
-
-        if (orders.stoporder != null) {
-            for ((oIndex, o) in orders.stoporder.withIndex()) {
-                for (mo in memoryOrders.stoporder) {
-                    if (o.transactionid == mo.transactionid) {
-                        memoryOrders.stoporder[oIndex] = o
-                    }
-                }
-            }
-        }
-        memory.orders.set(memoryOrders)
-
-        //memory.orders = orders;
-        if (orders.order != null) {
-            for (o in orders.order) {
-                if (o.orderno != null) {
-                    Transaction.signalAll(o.transactionid.toString(), o, memory.transactions.get())
-                }
-            }
-        }
-        if (orders.stoporder != null) {
-            for (o in orders.stoporder) {
-                Transaction.signalAll(o.transactionid.toString(), o, memory.transactions.get())
-            }
-        }
-    }
-//
-//    private fun applyForChannelListener(iChannel: IChannel, applier: Supplier<*>) {
-//        //TODO
-//    }
-//
-//    private fun getMarketById(id: Long?): String {
-//        var marketName = "Unknown"
-//        if (id == null) {
-//            return marketName
-//        }
-//        for (m in memory.markets) {
-//            if (m.getId().equals(id)) {
-//                marketName = m.getMarket()
-//                break
-//            }
-//        }
-//        return marketName
-//    }
 
     companion object {
         private val logger = KotlinLogging.logger {}

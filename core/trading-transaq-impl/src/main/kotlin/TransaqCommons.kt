@@ -1,8 +1,17 @@
 package org.cryptolosers.transaq
 
+import mu.KotlinLogging
 import org.cryptolosers.trading.model.InstrumentType
+import org.cryptolosers.trading.model.PriceInfo
+import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.TickerInfo
+import org.cryptolosers.transaq.connector.concurrent.Transaction
+import org.cryptolosers.transaq.xml.callback.internal.Order
 import java.math.BigDecimal
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 val FinamStockInstrument: InstrumentType = "SHARE" // акции
 val FinamBondInstrument: InstrumentType = "BOND" // облигации корпоративные
@@ -23,11 +32,50 @@ val FinamErrorInstrument: InstrumentType = "ERROR"
 
 data class TransaqTickerInfo(
     val tickerInfo: TickerInfo,
-//    val secCode: String,
-//    val market: String,
-//    val board: String,
+    val secCode: String,
+    val market: String,
+    val board: String,
     val decimals: Long,
     val minstep: BigDecimal,
     val lotSize: Long,
     val pointCost: BigDecimal
 )
+
+data class SecCodeMarket(
+    val secCode: String,
+    val market: Long
+)
+
+data class SecCodeBoard(
+    val secCode: String,
+    val board: String
+)
+
+data class TransaqPriceInfo(
+    var priceInfo: PriceInfo,
+    private val lock: Lock = ReentrantLock(),
+    private val condition: Condition = lock.newCondition()
+
+) {
+    fun await(): PriceInfo {
+        lock.lock()
+        try {
+            condition.await(30, TimeUnit.SECONDS)
+        } catch (e: InterruptedException) {
+            logger.error(e) { "PriceInfo was interrupted" }
+        }
+        return priceInfo
+    }
+
+    companion object {
+        fun signalAll(ticker: Ticker, memory: TransaqMemory) {
+            val priceInfoMemory = memory.priceMap[ticker]
+            if (priceInfoMemory != null) {
+                priceInfoMemory.lock.lock()
+                priceInfoMemory.condition.signalAll()
+                priceInfoMemory.lock.unlock()
+            }
+        }
+    }
+}
+private val logger = KotlinLogging.logger {}

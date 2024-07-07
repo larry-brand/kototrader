@@ -10,7 +10,7 @@ interface TradingApi {
 
 
     /** quotes data */
-    suspend fun getPrice(ticker: Ticker): BigDecimal
+    suspend fun getPrice(ticker: Ticker): PriceInfo
     suspend fun getOrderBook(ticker: Ticker): OrderBook
     suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant)
 

@@ -4,7 +4,7 @@ package org.cryptolosers.trading.model
 data class Ticker(val symbol: SymbolName, val exchange: ExchangeName? = null)
 
 data class TickerInfo (
-    val id: Ticker,
+    val ticker: Ticker,
     val shortDescription: String,
     val type: InstrumentType,
 //    val currency: Currency

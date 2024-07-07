@@ -40,7 +40,7 @@ class SimulatorTradingApiTest {
                     simulator.tradingApi.sendOrder(
                         MarketOrder(
                             Ticker("BR"),
-                            abs(1),
+                            abs(1L),
                             OrderDirection.SELL
                         )
                     )
