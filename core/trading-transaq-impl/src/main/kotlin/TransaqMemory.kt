@@ -27,6 +27,8 @@ class TransaqMemory {
     var priceMap: ConcurrentMap<Ticker, TransaqPriceInfo> = ConcurrentHashMap()
     var orderBookMap: ConcurrentMap<Ticker, OrderBook> = ConcurrentHashMap()
 
+    val candlesMap: ConcurrentMap<TickerTimeframe, MutableList<Candle>> = ConcurrentHashMap()
+
     var clients: MutableList<Client> = CopyOnWriteArrayList()
     var portfolioTpluses: AtomicReference<PortfolioTplus> = AtomicReference(PortfolioTplus())
     var wallet: AtomicReference<Wallet> = AtomicReference()

@@ -4,6 +4,7 @@ import mu.KotlinLogging
 import org.cryptolosers.commons.utils.JAXBUtils
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.jna.TCallback
+import org.cryptolosers.transaq.handlers.CandlesHandler
 import org.cryptolosers.transaq.handlers.OrdersHandler
 import org.cryptolosers.transaq.handlers.QuotationsHandler
 import org.cryptolosers.transaq.xml.callback.*
@@ -16,11 +17,12 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
 
     private val ordersHandler = OrdersHandler(memory)
     private val quotationsHandler = QuotationsHandler(memory)
+    private val candlesHandler = CandlesHandler(memory)
 
     override fun invoke(response: String) {
         try {
             if (response.startsWith("<pits>") || response.contains("<news_header>")
-                || response.startsWith("<candlekinds>") || response.startsWith("<trades>")
+                 || response.startsWith("<trades>")
                 || response.startsWith("<union") || response.startsWith("<overnight")) {
                 logger.debug { "Response wont be handled, it is not supported: $response" }
                 return
@@ -54,6 +56,11 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
                 ordersHandler.handle(resp)
             } else if (resp is Messages) {
                 logger.info { resp.toString() }
+            } else if (resp is Candlekinds) {
+                //logger.info { response }
+            } else if (resp is Candles) {
+                //logger.info { response }
+                candlesHandler.handle(resp)
             }
             //TODO:
 //            else if (resp is Trades) {
@@ -236,7 +243,7 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
                     ServerStatus::class.java,
                     Markets::class.java, Boards::class.java, Securities::class.java,
                     SecInfoUpd::class.java, Positions::class.java, Client::class.java, PortfolioTplus::class.java, Quotations::class.java, Quotes::class.java,
-                    Orders::class.java, Messages::class.java
+                    Orders::class.java, Messages::class.java, Candlekinds::class.java, Candles::class.java
                 )
             } catch (e: JAXBException) {
                 logger.error(e) { "Can not init JAXBContext" }

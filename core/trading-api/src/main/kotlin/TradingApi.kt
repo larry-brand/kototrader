@@ -1,8 +1,7 @@
 package org.cryptolosers.trading
 
 import org.cryptolosers.trading.model.*
-import java.math.BigDecimal
-import java.time.Instant
+import java.time.LocalDateTime
 
 interface TradingApi {
     /** tickers data */
@@ -13,7 +12,8 @@ interface TradingApi {
     suspend fun getPrice(ticker: Ticker): PriceInfo
     suspend fun subscribePriceChanges(ticker: Ticker, priceChangesListener: (PriceInfo) -> Unit)
     suspend fun getOrderBook(ticker: Ticker): OrderBook
-    suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant)
+    suspend fun getCandles(ticker: Ticker, timeframe: Timeframe, startTimestamp: LocalDateTime, endTimestamp: LocalDateTime): List<Candle>
+    suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session): List<Candle>
 
 
     /** orders commands */

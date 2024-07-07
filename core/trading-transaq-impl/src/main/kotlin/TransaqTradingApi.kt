@@ -5,10 +5,13 @@ import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.checkResult
 import org.cryptolosers.transaq.connector.jna.TXmlConnector
+import org.cryptolosers.transaq.xml.command.GetHistoryData
 import org.cryptolosers.transaq.xml.command.Subscribe
 import org.cryptolosers.transaq.xml.command.Unsubscribe
 import org.cryptolosers.transaq.xml.command.internal.Security
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
 
@@ -44,8 +47,56 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
+    override suspend fun getCandles(ticker: Ticker, timeframe: Timeframe, startTimestamp: LocalDateTime, endTimestamp: LocalDateTime): List<Candle> {
         TODO("Not yet implemented")
+    }
+
+    override suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session): List<Candle> {
+        val tickerInfo = memory.tickerMap[ticker] ?: throw IllegalStateException("Can not find ticker")
+        val getHistoryData = GetHistoryData()
+        val security = Security()
+        security.seccode = tickerInfo.secCode
+        security.board = tickerInfo.board
+        getHistoryData.security = security
+        //TODO: remove hardcode
+        when (timeframe) {
+            Timeframe.MIN1 -> getHistoryData.period = "1"
+            Timeframe.MIN5 -> getHistoryData.period = "2"
+            Timeframe.MIN15 -> getHistoryData.period = "3"
+            Timeframe.HOUR1 -> getHistoryData.period = "4"
+            Timeframe.DAY1 -> getHistoryData.period = "5"
+            else -> throw IllegalStateException("Timeframe is not supported")
+        }
+        getHistoryData.count = candlesCount.toLong()
+        getHistoryData.reset = true
+
+        // clear candles in memory because reset = true
+        val tickerTimeframe = TickerTimeframe(ticker = ticker, timeframe = timeframe)
+        val candlesBefore = memory.candlesMap[tickerTimeframe]
+        if (candlesBefore != null) {
+            memory.candlesMap[tickerTimeframe] = null
+        }
+
+        val subscribeXml = JAXBUtils.marshall(getHistoryData)
+        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
+        checkResult(subscribeResultXml, "GET CANDLES (GET HISTORY DATA)")
+
+
+        Thread.sleep(3000) //TODO
+        val candles = memory.candlesMap[tickerTimeframe]!!
+        if (candles.size >= candlesCount) {
+            when (session) {
+                Session.CURRENT_AND_PREVIOUS -> return candles.takeLast(candlesCount)
+                Session.CURRENT -> {
+                    val now = LocalDateTime.now(ZoneId.of("Europe/Moscow"))
+                    val sessionStarted = now.withHour(10).withMinute(0)
+                    return candles.takeLast(candlesCount).filter { it.timestamp >= sessionStarted }
+                }
+            }
+        } else {
+            throw IllegalStateException("Can not load candles, probably invalid size")
+        }
+
     }
 
     override suspend fun sendOrder(order: IOrder) {

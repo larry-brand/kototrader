@@ -3,7 +3,9 @@ package org.cryptolosers.samples
 import kotlinx.coroutines.runBlocking
 import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.Exchange_MOEX_FORTS
+import org.cryptolosers.trading.model.Session
 import org.cryptolosers.trading.model.Ticker
+import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.FinamFutureInstrument
 import org.cryptolosers.transaq.connector.concurrent.InternalTransaqConnector
 import kotlin.concurrent.thread
@@ -42,6 +44,11 @@ suspend fun main() {
                 println("Subscribed $it")
             }
 
+            println("LastCandles:")
+            conn.tradingApi().getLastCandles(Ticker("SiU4", Exchange_MOEX_FORTS), Timeframe.MIN5, 10, Session.CURRENT).forEach {
+                println(it)
+            }
+
 //            println("Price:")
 //            conn.tradingApi().getPrice(Ticker("SiU4", Exchange_MOEX_FORTS)).let {
 //                println(it)
@@ -49,5 +56,5 @@ suspend fun main() {
         }
     }
 
-    //conn.abort()
+    conn.abort()
 }

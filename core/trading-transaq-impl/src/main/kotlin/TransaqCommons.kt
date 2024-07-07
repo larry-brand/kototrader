@@ -1,10 +1,7 @@
 package org.cryptolosers.transaq
 
 import mu.KotlinLogging
-import org.cryptolosers.trading.model.InstrumentType
-import org.cryptolosers.trading.model.PriceInfo
-import org.cryptolosers.trading.model.Ticker
-import org.cryptolosers.trading.model.TickerInfo
+import org.cryptolosers.trading.model.*
 import java.math.BigDecimal
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -82,4 +79,10 @@ data class TransaqPriceInfo(
         }
     }
 }
+
+data class TickerTimeframe(
+    val ticker: Ticker,
+    val timeframe: Timeframe
+)
+
 private val logger = KotlinLogging.logger {}

@@ -2,6 +2,7 @@ package org.cryptolosers.trading.model
 
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDateTime
 
 data class PriceInfo(val lastPrice: BigDecimal, val bidPrice: BigDecimal, val askPrice: BigDecimal)
 
@@ -10,14 +11,18 @@ data class OrderBook(val ticker: Ticker, val ask: List<BigDecimal>, val bid: Lis
 data class OrderBookEntry(val price: BigDecimal, val size: Int)
 
 data class Candle(
-    val timestamp: Instant,
+    val timestamp: LocalDateTime,
     val openPrice: BigDecimal,
     val highPrice: BigDecimal,
     val lowPrice: BigDecimal,
     val closePrice: BigDecimal,
-    val volume: Int
+    val volume: Long
 )
 
 enum class Timeframe {
-    _TIKS, _1_MIN, _5_MIN, _15_MIN, _1_HOUR, _1_DAY
+    TIKS, MIN1, MIN5, MIN15, HOUR1, DAY1
+}
+
+enum class Session {
+    CURRENT_AND_PREVIOUS, CURRENT
 }

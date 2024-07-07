@@ -3,7 +3,7 @@ package org.cryptolosers.simulator
 import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
 import java.math.BigDecimal
-import java.time.Instant
+import java.time.LocalDateTime
 import kotlin.math.absoluteValue
 
 
@@ -31,7 +31,11 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
+    override suspend fun getCandles(ticker: Ticker, timeframe: Timeframe, startTimestamp: LocalDateTime, endTimestamp: LocalDateTime): List<Candle> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session): List<Candle> {
         TODO("Not yet implemented")
     }
 
