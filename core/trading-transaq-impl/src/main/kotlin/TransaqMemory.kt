@@ -42,6 +42,9 @@ class TransaqMemory {
     var ordersMapped: AtomicReference<List<IOrder>> = AtomicReference(ArrayList())
     var transactions: AtomicReference<Transactions> = AtomicReference(Transactions())
 
+    // listeners
+    var priceChangesListenerMap: MutableMap<Ticker, (PriceInfo) -> Unit> = ConcurrentHashMap()
+
     fun reset() {
         //TODO
     }

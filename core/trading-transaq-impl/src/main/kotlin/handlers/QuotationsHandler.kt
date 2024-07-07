@@ -33,6 +33,10 @@ class QuotationsHandler(val memory: TransaqMemory) {
             memory.priceMap[ticker]!!.priceInfo = price
             memory.priceMap[ticker]!!.subscribed = true
             TransaqPriceInfo.signalAll(ticker, memory)
+
+            memory.priceChangesListenerMap[ticker]?.let { priceChangesListener ->
+                priceChangesListener(price)
+            }
         }
     }
 }

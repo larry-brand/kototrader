@@ -17,19 +17,9 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
     }
 
     override suspend fun getPrice(ticker: Ticker): PriceInfo {
-        val tickerInfo = memory.tickerMap[ticker] ?: throw IllegalStateException("Can not find ticker")
-        memory.priceMap.computeIfAbsent(ticker) { TransaqPriceInfo() }
-        val subscribe = Subscribe()
-        val quotations = Subscribe.Quotations()
-        val security = Security()
-        security.seccode = tickerInfo.secCode
-        security.board = tickerInfo.board
-        quotations.security = listOf(security)
-        subscribe.quotations = quotations
-
-        val subscribeXml = JAXBUtils.marshall(subscribe)
-        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
-        checkResult(subscribeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
+        if (memory.priceChangesListenerMap[ticker] == null) {
+            subscribePrice(ticker)
+        }
 
         val price = memory.priceMap[ticker]!!
         val result = if (!price.subscribed) {
@@ -38,16 +28,16 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
             price.getFilledPriceInfo()
         }
 
-        val unsubscribe = Unsubscribe()
-        unsubscribe.quotations = quotations
-        val unsubscribeXml = JAXBUtils.marshall(unsubscribe)
-        val unsubscribeResultXml = TXmlConnector.sendCommand(unsubscribeXml)
-        checkResult(unsubscribeResultXml, "UNSUBSCRIBE PRICE (QUITATIONS)")
+        if (memory.priceChangesListenerMap[ticker] == null) {
+            unsubscribePrice(ticker)
+            price.subscribed = false
+        }
         return result
     }
 
     override suspend fun subscribePriceChanges(ticker: Ticker, priceChangesListener: (PriceInfo) -> Unit) {
-        TODO("Not yet implemented")
+        memory.priceChangesListenerMap[ticker] = priceChangesListener
+        subscribePrice(ticker)
     }
 
     override suspend fun getOrderBook(ticker: Ticker): OrderBook {
@@ -92,5 +82,35 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
 
     override suspend fun getWallet(): Wallet {
         return memory.wallet.get()
+    }
+
+    private fun subscribePrice(ticker: Ticker) {
+        val tickerInfo = memory.tickerMap[ticker] ?: throw IllegalStateException("Can not find ticker")
+        memory.priceMap.computeIfAbsent(ticker) { TransaqPriceInfo() }
+        val subscribe = Subscribe()
+        val quotations = Subscribe.Quotations()
+        val security = Security()
+        security.seccode = tickerInfo.secCode
+        security.board = tickerInfo.board
+        quotations.security = listOf(security)
+        subscribe.quotations = quotations
+
+        val subscribeXml = JAXBUtils.marshall(subscribe)
+        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
+        checkResult(subscribeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
+    }
+
+    private fun unsubscribePrice(ticker: Ticker) {
+        val tickerInfo = memory.tickerMap[ticker] ?: throw IllegalStateException("Can not find ticker")
+        val unsubscribe = Unsubscribe()
+        val quotations = Subscribe.Quotations()
+        val security = Security()
+        security.seccode = tickerInfo.secCode
+        security.board = tickerInfo.board
+        quotations.security = listOf(security)
+        unsubscribe.quotations = quotations
+        val unsubscribeXml = JAXBUtils.marshall(unsubscribe)
+        val unsubscribeResultXml = TXmlConnector.sendCommand(unsubscribeXml)
+        checkResult(unsubscribeResultXml, "UNSUBSCRIBE PRICE (QUITATIONS)")
     }
 }

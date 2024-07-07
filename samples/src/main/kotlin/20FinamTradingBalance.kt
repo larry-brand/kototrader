@@ -1,8 +1,5 @@
 package org.cryptolosers.samples
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.Exchange_MOEX_FORTS
@@ -41,12 +38,16 @@ suspend fun main() {
                 println(it)
             }
 
-            println("Price:")
-            conn.tradingApi().getPrice(Ticker("BRJ5", Exchange_MOEX_FORTS)).let {
-                println(it)
+            conn.tradingApi().subscribePriceChanges(Ticker("BRJ5", Exchange_MOEX_FORTS)) {
+                println("Subscribed $it")
             }
+
+//            println("Price:")
+//            conn.tradingApi().getPrice(Ticker("BRJ5", Exchange_MOEX_FORTS)).let {
+//                println(it)
+//            }
         }
     }
 
-    conn.abort()
+    //conn.abort()
 }
