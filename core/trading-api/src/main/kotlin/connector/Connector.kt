@@ -14,6 +14,10 @@ class Connector(val internalTerminalConnector: InternalTerminalConnector, val re
         }
     }
 
+    fun changePassword(newPassword: String) {
+        internalTerminalConnector.changePassword(newPassword)
+    }
+
     fun abort() {
         reconnectThread!!.interrupt()
     }

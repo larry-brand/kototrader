@@ -1,22 +1,20 @@
 package org.cryptolosers.trading.model
 
-import java.util.*
-
 /** ticker=BR exchangeId="MOEX"  internalId=34 */
-data class TickerId(val ticker: String, val exchange: ExchangeId? = null, val internalId: String? = null)
+data class Ticker(val symbol: SymbolName, val exchange: ExchangeName? = null)
 
 data class TickerInfo (
-    val id: TickerId,
-    val tickerName: String,
-    val exchangeId: ExchangeId,
+    val id: Ticker,
+    val shortDescription: String,
     val type: InstrumentType,
-    val currency: Currency
+//    val currency: Currency
 )
 
-data class ExchangeId(val name: String, val internalId: String? = null)
+typealias SymbolName = String
+typealias ExchangeName = String
 
-val MOEX_Exchange = ExchangeId("MOEX")
-val NASDAQ_Exchange = ExchangeId("NASDAQ")
-val NYSE_Exchange = ExchangeId("NYSE")
+val MOEX_Exchange: ExchangeName = "MOEX"
+val NASDAQ_Exchange: ExchangeName = "NASDAQ"
+val NYSE_Exchange: ExchangeName = "NYSE"
 
-data class InstrumentType(val name: String)
+typealias InstrumentType = String

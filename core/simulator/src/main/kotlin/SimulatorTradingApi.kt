@@ -19,15 +19,15 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getPrice(tickerId: TickerId): BigDecimal {
+    override suspend fun getPrice(ticker: Ticker): BigDecimal {
         return nowPrice
     }
 
-    override suspend fun getOrderBook(tickerId: TickerId): OrderBook {
+    override suspend fun getOrderBook(ticker: Ticker): OrderBook {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getCandles(tickerId: TickerId, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
+    override suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
         TODO("Not yet implemented")
     }
 
@@ -38,10 +38,10 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
                 if (order.orderDirection == OrderDirection.SELL) {
                     sizeSign = -order.size
                 }
-                positionBR = Position(order.tickerId, sizeSign, nowPrice)
-                wallet.balance -= (getPrice(order.tickerId) * order.size.toBigDecimal()).abs()
+                positionBR = Position(order.ticker, sizeSign, nowPrice)
+                wallet.balance -= (getPrice(order.ticker) * order.size.toBigDecimal()).abs()
             } else {
-                var orderSizeWithSigh: Int = order.size
+                var orderSizeWithSigh = order.size
                 if (order.orderDirection == OrderDirection.SELL) {
                     orderSizeWithSigh = - order.size
                 }
@@ -70,7 +70,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOpenPosition(tickerId: TickerId): Position? {
+    override suspend fun getOpenPosition(ticker: Ticker): Position? {
         return positionBR
     }
 
@@ -78,7 +78,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOrders(tickerId: TickerId): List<IOrder> {
+    override suspend fun getOrders(ticker: Ticker): List<IOrder> {
         TODO("Not yet implemented")
     }
 
@@ -86,7 +86,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOperations(tickerId: TickerId): List<Operation> {
+    override suspend fun getOperations(ticker: Ticker): List<Operation> {
         TODO("Not yet implemented")
     }
 
@@ -96,7 +96,7 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
 
     override suspend fun getWallet(): Wallet {
         if (positionBR != null)
-            wallet.equity = wallet.balance + (getPrice(positionBR!!.tickerId) * positionBR!!.size.toBigDecimal()).abs()
+            wallet.equity = wallet.balance + (getPrice(positionBR!!.ticker) * positionBR!!.size.toBigDecimal()).abs()
         return wallet
     }
 }

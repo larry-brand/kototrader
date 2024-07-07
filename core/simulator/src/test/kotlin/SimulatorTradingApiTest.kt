@@ -11,7 +11,7 @@ import org.cryptolosers.history.Timeframe
 import org.cryptolosers.history.file.HistoryFile
 import org.cryptolosers.trading.model.MarketOrder
 import org.cryptolosers.trading.model.OrderDirection
-import org.cryptolosers.trading.model.TickerId
+import org.cryptolosers.trading.model.Ticker
 import org.junit.jupiter.api.Test
 import java.io.BufferedReader
 import java.io.StringReader
@@ -39,7 +39,7 @@ class SimulatorTradingApiTest {
                 if (!sended)
                     simulator.tradingApi.sendOrder(
                         MarketOrder(
-                            TickerId("BR"),
+                            Ticker("BR"),
                             abs(1),
                             OrderDirection.SELL
                         )

@@ -12,7 +12,7 @@ import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.MarketOrder
 import org.cryptolosers.trading.model.OrderDirection
 import org.cryptolosers.trading.model.Position
-import org.cryptolosers.trading.model.TickerId
+import org.cryptolosers.trading.model.Ticker
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -50,7 +50,7 @@ class MyAnchorRobot : IRobot {
             return
         }
         val ldt = historyCandle.timestamp.atZone(ZoneOffset.UTC).toLocalDateTime()
-        val t = TickerId("BR")
+        val t = Ticker("BR")
         val nowPrice = historyCandle.closePrice
         val position: Position? = tradingApi.getOpenPosition(t)
         val closePosEndDay = true

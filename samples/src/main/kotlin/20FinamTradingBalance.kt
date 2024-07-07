@@ -14,6 +14,17 @@ import org.cryptolosers.transaq.connector.concurrent.InternalTransaqConnector
 suspend fun main() {
     val conn  = Connector(InternalTransaqConnector())
     conn.connect()
-    println("tickers " + conn.tradingApi().getAllTickers().filter { it.id.ticker.startsWith("BR") && it.type == FinamFutureInstrument })
+
+    val tickers = conn.tradingApi().getAllTickers().filter { it.id.symbol.startsWith("BR") && it.type == FinamFutureInstrument }
+    println("Tickers:")
+    tickers.forEach {
+        println(it)
+    }
+
+    println("Positions:")
+    val positions = conn.tradingApi().getAllOpenPositions()
+    positions.forEach {
+        println(it)
+    }
     conn.abort()
 }

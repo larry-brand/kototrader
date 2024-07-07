@@ -9,6 +9,8 @@ interface InternalTerminalConnector {
     fun isConnected(): ConnectionStatus
     fun setConnectionListener(runnable: Runnable?)
 
+    fun changePassword(newPassword: String)
+
     fun tradingApi(): TradingApi
 }
 

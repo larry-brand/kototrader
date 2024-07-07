@@ -11,15 +11,15 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         return memory.tickerMap.values.map{ it.tickerInfo }.toList()
     }
 
-    override suspend fun getPrice(tickerId: TickerId): BigDecimal {
+    override suspend fun getPrice(ticker: Ticker): BigDecimal {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOrderBook(tickerId: TickerId): OrderBook {
+    override suspend fun getOrderBook(ticker: Ticker): OrderBook {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getCandles(tickerId: TickerId, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
+    override suspend fun getCandles(ticker: Ticker, periodicity: Timeframe, startTimestamp: Instant, endTimestamp: Instant) {
         TODO("Not yet implemented")
     }
 
@@ -31,15 +31,15 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOpenPosition(tickerId: TickerId): Position? {
+    override suspend fun getOpenPosition(ticker: Ticker): Position? {
         TODO("Not yet implemented")
     }
 
     override suspend fun getAllOpenPositions(): List<Position> {
-        TODO("Not yet implemented")
+        return memory.positions.get()
     }
 
-    override suspend fun getOrders(tickerId: TickerId): List<IOrder> {
+    override suspend fun getOrders(ticker: Ticker): List<IOrder> {
         TODO("Not yet implemented")
     }
 
@@ -47,7 +47,7 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getOperations(tickerId: TickerId): List<Operation> {
+    override suspend fun getOperations(ticker: Ticker): List<Operation> {
         TODO("Not yet implemented")
     }
 

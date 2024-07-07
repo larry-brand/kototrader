@@ -14,6 +14,7 @@ import org.cryptolosers.transaq.TransaqTradingApi
 import org.cryptolosers.transaq.TransaqTradingApiTCallback
 import org.cryptolosers.transaq.connector.jna.TXmlConnector
 import org.cryptolosers.transaq.xml.callback.ServerStatus
+import org.cryptolosers.transaq.xml.command.ChangePass
 import org.cryptolosers.transaq.xml.command.Connect
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -111,6 +112,26 @@ class InternalTransaqConnector: InternalTerminalConnector {
 
     override fun setConnectionListener(runnable: Runnable?) {
         TODO("Not yet implemented")
+    }
+
+    override fun changePassword(newPassword: String) {
+        val file = ConfigTransaqFile()
+        file.init()
+        val changePass = ChangePass()
+        changePass.oldpass = file.password
+        changePass.newpass = newPassword
+        val changePassXml = JAXBUtils.marshall(changePass)
+        val changePassResultXml = TXmlConnector.sendCommand(changePassXml)
+
+        val result =
+            JAXBUtils.unmarshall(
+                changePassResultXml,
+                org.cryptolosers.transaq.xml.misc.Result::class.java
+            )
+        if (result.success == null || result.success == false) {
+            logger.printFail { "CHANGE PASSWORD FAILED , Transaq.Result is not successful" }
+            throw IllegalStateException()
+        }
     }
 
     override fun tradingApi(): TradingApi {

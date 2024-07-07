@@ -2,10 +2,8 @@ package org.cryptolosers.transaq
 
 import mu.KotlinLogging
 import org.cryptolosers.commons.utils.JAXBUtils
-import org.cryptolosers.trading.model.ExchangeId
-import org.cryptolosers.trading.model.InstrumentType
-import org.cryptolosers.trading.model.TickerId
-import org.cryptolosers.trading.model.TickerInfo
+import org.cryptolosers.trading.model.*
+import org.cryptolosers.transaq.connector.concurrent.Transaction
 import org.cryptolosers.transaq.connector.jna.TCallback
 import org.cryptolosers.transaq.xml.callback.*
 import java.util.*
@@ -24,34 +22,38 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
             }
 
             val resp: Any = JAXBUtils.unmarshall(response, jaxbContext)
-            // ServerStatus
+
             if (resp is ServerStatus) {
                 memory.responseServerStatuses.put(resp)
-            } else if (resp is Markets) {
+            } else if (resp is Markets) { // Доступные рынки
                 resp.market.forEach { memory.markets[it.id] = it }
-            } else if (resp is Boards) {
+            } else if (resp is Boards) { //Справочник режимов торгов
                 memory.boards.clear()
-                //memory.boards.addAll(boards.board)
-            } else if (resp is Securities) {
+                memory.boards.addAll(resp.board)
+            } else if (resp is Securities) { // Список инструментов
                 handleSecirity(resp)
-            } else if (resp is SecInfoUpd) {
+            } else if (resp is SecInfoUpd) { //Обновление информации по инструменту
                 //TODO add handle
-            } else if (resp is Positions) {
-                //handlePosition(resp)
-            } else if (resp is Client) {
+            } else if (resp is Positions) { //Позиции
+                handlePosition(resp)
+            } else if (resp is Client) { //Клиентские счета
                 //TODO: to map
                 memory.clients.add(resp)
-            } else if (resp is PortfolioTplus) {
+            } else if (resp is PortfolioTplus) { //Клиентский портфель Т+
                 memory.portfolioTpluses.set(resp)
-            } else if (resp is Quotes) {
+            } else if (resp is Quotes) { //Глубина рынка по инструменту(ам), т.е. стакан
                 //handleQuotes(resp)
-            } else if (resp is Quotations) {
+            } else if (resp is Quotations) { //Котировки по инструменту(ам)
                 //handleQuotations(resp)
-            } else if (resp is Orders) {
-                //handleOrders(resp)
+            } else if (resp is Orders) { //Заявка(и) клиента
+                handleOrders(resp)
             } else if (resp is Messages) {
                 logger.info { resp.toString() }
-            } else  {
+            }
+            //TODO:
+//            else if (resp is Trades) {
+//            }
+            else  {
                 logger.info {"Response is not handled, may be not instanced $response" }
             }
         } catch (e: JAXBException) {
@@ -70,98 +72,71 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
             try {
                 // Secid действителен в течение сессии, постоянным уникальным ключом
                 // инструмента между сессиями является Seccode+Market
-                val key = TickerId(s.seccode, internalId = s.seccode + " " + s.market)
-                val currency = Currency.getInstance("RUB") // TODO
                 val marketName = memory.markets[s.market!!.toLong()]!!.market!!
-                val info = TickerInfo(key, s.shortname!!, ExchangeId(marketName, s.market!!) , InstrumentType(s.sectype!!), currency)
-                memory.tickerMap[key] = TransaqTickerInfo(info, s.board!!, s.decimals!!, s.minstep!!, s.lotsize!!, s.point_cost!!)
+                val key = Ticker(symbol = s.seccode, exchange = marketName)
+//                val currency = Currency.getInstance("RUB") // TODO
+
+                val info = TickerInfo(key, s.shortname!!, s.sectype!!)
+                memory.tickerMap[key] = TransaqTickerInfo(info, s.decimals!!, s.minstep!!, s.lotsize!!, s.point_cost!!)
             } catch (e: RuntimeException) {
                 logger.error(e) { "Can not handle security $s" }
             }
         }
     }
-//
-//    private fun handlePosition(responseObj: Any) {
-//        val positions: Positions = responseObj as Positions
-//        if (positions.getSec_position() != null) {
-//            for (p in positions.getSec_position()) {
-//                for (m in memory.markets) {
-//                    if (m.getId().equals(p.getMarket())) {
-//                        memory.secPositionMap.put(Ticker(p.getSeccode(), m.getMarket()), p)
-//                    }
-//                }
-//            }
-//        }
-//        if (positions.getForts_position() != null) {
-//            for (p in positions.getForts_position()) {
-//                for (m in memory.markets) {
-//                    if (m.getId().equals(p.getMarkets().getMarkets().get(0).getMarkets())) {
-//                        memory.fortsPositionMap.put(Ticker(p.getSeccode(), m.getMarket()), p)
-//                    }
-//                }
-//            }
-//        }
-//        if (positions.getMoney_position() != null) {
-//            for (p in positions.getMoney_position()) {
-//                for (m in memory.markets) {
-//                    if (m.getId().equals(p.getMarkets().getMarket().get(0).getMarket())) {
-//                        memory.moneyPositionMap.put(Ticker(p.getAsset(), m.getMarket()), p)
-//                    }
-//                }
-//            }
-//        }
-//        if (positions.getUnited_limits() != null) {
-//            memory.unitedLimits.clear()
-//            memory.unitedLimits.addAll(positions.getUnited_limits())
-//        }
-//        // copy secPosition, fortsPosition to positions
-//        val thisNewPositions: MutableList<Position> = ArrayList<Position>()
-//        for (p in memory.secPositionMap.values) {
-//            var pt: PositionType? = null
-//            if (p.getSaldo() > 0) {
-//                pt = PositionType.LONG
-//            } else if (p.getSaldo() < 0) {
-//                pt = PositionType.SHORT
-//            } else {
-//                // empty position, just display it
-//                //LOGGER.error("invalid saldo");
-//            }
-//            if (pt != null) {
-//                thisNewPositions.add(Position(p.getSeccode(), p.getSaldo(), pt))
-//            }
-//        }
-//        for (p in memory.fortsPositionMap.values) {
-//            var pt: PositionType? = null
-//            if (p.getTotalnet() > 0) {
-//                pt = PositionType.LONG
-//            } else if (p.getTotalnet() < 0) {
-//                pt = PositionType.SHORT
-//            } else {
-//                //LOGGER.error("invalid totalnet");
-//                //return;
-//            }
-//            if (pt != null) {
-//                thisNewPositions.add(Position(p.getSeccode(), p.getTotalnet(), pt))
-//            }
-//        }
-//        for (m in memory.moneyPositionMap.values) {
-//            thisNewPositions.add(Position(m.getAsset(), m.getSaldo().longValue(), null))
-//        }
-//        for (u in memory.unitedLimits) {
-//            val oldWallet: Wallet = memory.wallet.get()
-//            val newWallet = Wallet()
-//            newWallet.setEquity(u.getEquity())
-//            newWallet.setMargin(u.getRequirements())
-//            newWallet.setFreeMargin(u.getFree())
-//            memory.wallet.set(newWallet)
-//            if (!newWallet.equals(oldWallet)) {
-//                applyForChannelListener(WalletChannel(), Supplier<*> { newWallet })
-//            }
-//        }
-//        memory.positions.set(thisNewPositions)
-//        applyForChannelListener(WalletChannel()) { thisNewPositions }
-//    }
-//
+
+    private fun handlePosition(responseObj: Any) {
+        val positions: Positions = responseObj as Positions
+        if (positions.sec_position != null) {
+            for (p in positions.sec_position) {
+                memory.markets[p.market]?.let {
+                    memory.secPositionMap.put(Ticker(p.seccode, it.market), p)
+                }
+            }
+        }
+        if (positions.forts_position != null) {
+            for (p in positions.forts_position) {
+                memory.markets[p.markets.markets.first().markets]?.let {
+                    memory.fortsPositionMap.put(Ticker(p.seccode, it.market), p)
+                }
+            }
+        }
+        if (positions.money_position != null) {
+            for (p in positions.money_position) {
+                memory.markets[p.markets.market.first().market]?.let {
+                    memory.moneyPositionMap.put(Ticker(p.asset, it.market), p)
+                }
+            }
+        }
+        if (positions.united_limits != null) {
+            memory.unitedLimits.clear()
+            memory.unitedLimits.addAll(positions.united_limits)
+        }
+        // copy secPosition, fortsPosition to positions
+        val thisNewPositions: MutableList<Position> = ArrayList<Position>()
+        for (p in memory.secPositionMap) {
+            if (p.value.saldo != 0L) {
+                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.saldo))
+            }
+        }
+        for (p in memory.fortsPositionMap) {
+            if (p.value.totalnet != 0L) {
+                thisNewPositions.add(Position(Ticker(p.key.symbol, p.key.exchange), p.value.totalnet))
+            }
+        }
+        for (m in memory.moneyPositionMap) {
+            thisNewPositions.add(Position(Ticker(m.key.symbol, m.key.exchange), m.value.saldo.toLong()))
+        }
+        for (u in memory.unitedLimits) {
+            val newWallet = Wallet(
+                balance = u.equity,
+                margin = u.requirements,
+                freeMargin = u.free
+            )
+            memory.wallet.set(newWallet)
+        }
+        memory.positions.set(thisNewPositions)
+    }
+
 //    private fun handleQuotes(responseObj: Any) {
 //        val quotes: Quotes = responseObj as Quotes
 //        val tickerSet: MutableSet<Ticker> = HashSet<Ticker>()
@@ -231,66 +206,45 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
 //        }
 //    }
 //
-//    private fun handleOrders(responseObj: Any) {
-//        val orders: Orders = responseObj as Orders
-//        if (orders.getOrder() != null) {
-//            for (o in orders.getOrder()) {
-//                if (memory.orders.getOrder() != null) {
-//                    var iMemoryOrder: Int? = null
-//                    for (i in 0 until memory.orders.getOrder().size()) {
-//                        if (o.getOrderno().equals(memory.orders.getOrder().get(i).getOrderno())) {
-//                            iMemoryOrder = i
-//                            break
-//                        }
-//                    }
-//                    if (iMemoryOrder != null) {
-//                        memory.orders.getOrder().set(iMemoryOrder, o)
-//                    } else {
-//                        memory.orders.getOrder().add(o)
-//                    }
-//                } else {
-//                    memory.orders.setOrder(orders.getOrder())
-//                }
-//            }
-//        }
-//        if (orders.getStoporder() != null) {
-//            for (o in orders.getStoporder()) {
-//                if (memory.orders.getStoporder() != null) {
-//                    var iMemoryOrder: Int? = null
-//                    for (i in 0 until memory.orders.getStoporder().size()) {
-//                        if (o.getTransactionid().equals(memory.orders.getStoporder().get(i).getTransactionid())) {
-//                            iMemoryOrder = i
-//                            break
-//                        }
-//                    }
-//                    if (iMemoryOrder != null) {
-//                        memory.orders.getStoporder().set(iMemoryOrder, o)
-//                    } else {
-//                        memory.orders.getStoporder().add(o)
-//                    }
-//                } else {
-//                    memory.orders.setStoporder(orders.getStoporder())
-//                }
-//            }
-//        }
-//
-//        //memory.orders = orders;
-//        if (orders.getOrder() != null) {
-//            for (o in orders.getOrder()) {
-//                if (o.getOrderno() != null && o.getOrderno() !== 0) {
-//                    val transactionId: Long = o.getTransactionid()
-//                    Transaction.signalAll(transactionId.toString(), o, memory.transactions)
-//                }
-//            }
-//        }
-//        if (orders.getStoporder() != null) {
-//            for (o in orders.getStoporder()) {
-//                val transactionId: Long = o.getTransactionid()
-//                Transaction.signalAll(transactionId.toString(), o, memory.transactions)
-//            }
-//        }
-//        applyForChannelListener(OrdersChannel(), Supplier<*> { TransaqAsyncTradingApi.getAllOrdersFromMemory(memory) })
-//    }
+
+    private fun handleOrders(responseObj: Any) {
+        val orders: Orders = responseObj as Orders
+        val memoryOrders = memory.orders.get()
+        if (orders.order != null) {
+            for ((oIndex, o) in orders.order.withIndex()) {
+                for (mo in memoryOrders.order) {
+                    if (o.orderno == mo.orderno) {
+                        memoryOrders.order[oIndex] = o
+                    }
+                }
+            }
+        }
+
+        if (orders.stoporder != null) {
+            for ((oIndex, o) in orders.stoporder.withIndex()) {
+                for (mo in memoryOrders.stoporder) {
+                    if (o.transactionid == mo.transactionid) {
+                        memoryOrders.stoporder[oIndex] = o
+                    }
+                }
+            }
+        }
+        memory.orders.set(memoryOrders)
+
+        //memory.orders = orders;
+        if (orders.order != null) {
+            for (o in orders.order) {
+                if (o.orderno != null) {
+                    Transaction.signalAll(o.transactionid.toString(), o, memory.transactions.get())
+                }
+            }
+        }
+        if (orders.stoporder != null) {
+            for (o in orders.stoporder) {
+                Transaction.signalAll(o.transactionid.toString(), o, memory.transactions.get())
+            }
+        }
+    }
 //
 //    private fun applyForChannelListener(iChannel: IChannel, applier: Supplier<*>) {
 //        //TODO

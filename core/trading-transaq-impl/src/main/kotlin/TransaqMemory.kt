@@ -2,7 +2,7 @@ package org.cryptolosers.transaq
 
 import org.cryptolosers.trading.model.OrderBook
 import org.cryptolosers.trading.model.Position
-import org.cryptolosers.trading.model.TickerId
+import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.Wallet
 import org.cryptolosers.transaq.connector.concurrent.Transaction
 import org.cryptolosers.transaq.xml.callback.*
@@ -23,18 +23,18 @@ class TransaqMemory {
     // not technical
     var markets: ConcurrentMap<Long, Markets.Market> = ConcurrentHashMap()
     var boards: MutableList<Boards.Board> = CopyOnWriteArrayList()
-    var tickerMap: MutableMap<TickerId, TransaqTickerInfo> = ConcurrentHashMap()
+    var tickerMap: MutableMap<Ticker, TransaqTickerInfo> = ConcurrentHashMap()
 
-    var priceMap: ConcurrentMap<TickerId, BigDecimal> = ConcurrentHashMap()
-    var orderBookMap: ConcurrentMap<TickerId, OrderBook> = ConcurrentHashMap()
+    var priceMap: ConcurrentMap<Ticker, BigDecimal> = ConcurrentHashMap()
+    var orderBookMap: ConcurrentMap<Ticker, OrderBook> = ConcurrentHashMap()
 
     var clients: MutableList<Client> = CopyOnWriteArrayList()
     var portfolioTpluses: AtomicReference<PortfolioTplus> = AtomicReference(PortfolioTplus())
-    var wallet: AtomicReference<Wallet?> = AtomicReference()
+    var wallet: AtomicReference<Wallet> = AtomicReference()
 
-    var secPositionMap: MutableMap<TickerId, SecPosition> = ConcurrentHashMap()
-    var fortsPositionMap: MutableMap<TickerId, FortsPosition> = ConcurrentHashMap()
-    var moneyPositionMap: MutableMap<TickerId, MoneyPosition> = ConcurrentHashMap()
+    var secPositionMap: MutableMap<Ticker, SecPosition> = ConcurrentHashMap()
+    var fortsPositionMap: MutableMap<Ticker, FortsPosition> = ConcurrentHashMap()
+    var moneyPositionMap: MutableMap<Ticker, MoneyPosition> = ConcurrentHashMap()
     var positions: AtomicReference<List<Position>> = AtomicReference(ArrayList())
 
     var unitedLimits: MutableList<UnitedLimits> = CopyOnWriteArrayList()
