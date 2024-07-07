@@ -22,7 +22,7 @@ suspend fun main() {
     thread {
         runBlocking {
             val tickers = conn.tradingApi().getAllTickers()
-                .filter { it.ticker.symbol.startsWith("BR") && it.type == FinamFutureInstrument }
+                .filter { it.ticker.symbol.startsWith("Si") && it.type == FinamFutureInstrument }
             println("Tickers:")
             tickers.forEach {
                 println(it)
@@ -38,12 +38,12 @@ suspend fun main() {
                 println(it)
             }
 
-            conn.tradingApi().subscribePriceChanges(tickers.first().ticker) {
+            conn.tradingApi().subscribePriceChanges(Ticker("SiU4", Exchange_MOEX_FORTS)) {
                 println("Subscribed $it")
             }
 
 //            println("Price:")
-//            conn.tradingApi().getPrice(tickers.first().ticker).let {
+//            conn.tradingApi().getPrice(Ticker("SiU4", Exchange_MOEX_FORTS)).let {
 //                println(it)
 //            }
         }
