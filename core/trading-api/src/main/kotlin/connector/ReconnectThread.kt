@@ -2,7 +2,7 @@ package org.cryptolosers.trading.connector
 
 import mu.KotlinLogging
 
-class ReconnectThread(val connector: InternalTerminalConnector) : Runnable {
+class ReconnectThread(val connector: TerminalConnector) : Runnable {
 
     private val logger = KotlinLogging.logger {}
 

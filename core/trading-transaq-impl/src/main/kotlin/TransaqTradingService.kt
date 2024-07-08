@@ -1,21 +1,17 @@
 package org.cryptolosers.transaq
 
 import mu.KotlinLogging
-import org.cryptolosers.commons.utils.JAXBUtils
 import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
-import org.cryptolosers.transaq.connector.concurrent.checkResult
-import org.cryptolosers.transaq.connector.jna.TXmlConnector
-import org.cryptolosers.transaq.xml.command.GetHistoryData
-import org.cryptolosers.transaq.xml.command.Subscribe
-import org.cryptolosers.transaq.xml.command.Unsubscribe
+import org.cryptolosers.transaq.command.executor.SendOrderCommandExecutor
+import org.cryptolosers.transaq.connector.concurrent.sendCommandAndCheckResult
+import org.cryptolosers.transaq.xml.command.*
 import org.cryptolosers.transaq.xml.command.internal.Security
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
-
+class TransaqTradingService(val memory: TransaqMemory): TradingApi {
+    private val sendOrderCommandExecutor = SendOrderCommandExecutor(memory)
     private val logger = KotlinLogging.logger {}
 
     override suspend fun getAllTickers(): List<TickerInfo> {
@@ -80,10 +76,7 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         }
         memory.candlesMap[tickerTimeframe]!!.candles.clear()
 
-        val subscribeXml = JAXBUtils.marshall(getHistoryData)
-        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
-        checkResult(subscribeResultXml, "GET CANDLES (GET HISTORY DATA)")
-
+        sendCommandAndCheckResult(getHistoryData)
 
         val candles = memory.candlesMap[tickerTimeframe]!!.await()
         val takeSize = if (candles.size >= candlesCount) {
@@ -104,15 +97,27 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
     }
 
     override suspend fun sendOrder(order: IOrder) {
-        TODO("Not yet implemented")
+        sendOrderCommandExecutor.sendOrder(order)
     }
 
     override suspend fun removeOrder(orderId: Long) {
-        TODO("Not yet implemented")
+        val order = memory.orders.get().order.firstOrNull { it.orderno == orderId }
+        val stopOrder = memory.orders.get().stoporder.firstOrNull { it.activeorderno == orderId }
+        if (order != null) {
+            val cancelOrder = CancelOrder()
+            cancelOrder.transactionid = order.transactionid.toString()
+            sendCommandAndCheckResult(cancelOrder)
+        } else if (stopOrder != null) {
+            val cancelStopOrder = CancelStopOrder()
+            cancelStopOrder.transactionid = stopOrder.transactionid.toString()
+            sendCommandAndCheckResult(cancelStopOrder)
+        } else {
+            throw IllegalStateException("Order not found")
+        }
     }
 
     override suspend fun getOpenPosition(ticker: Ticker): Position? {
-        TODO("Not yet implemented")
+        return memory.positions.get().firstOrNull { it.ticker == ticker }
     }
 
     override suspend fun getAllOpenPositions(): List<Position> {
@@ -120,7 +125,16 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
     }
 
     override suspend fun getOrders(ticker: Ticker): List<IOrder> {
-        TODO("Not yet implemented")
+        return memory.ordersMapped.get().filter {
+            when (it) {
+                is LimitOrder -> { it.ticker == ticker }
+                is StopOrder -> { it.ticker == ticker }
+                is TakeprofitOrder -> { it.ticker == ticker }
+                is StopAndTakeprofitOrder -> { it.stopOrder.ticker == ticker }
+                else -> throw IllegalStateException("unknown order")
+
+            }
+        }
     }
 
     override suspend fun getAllOrders(): List<IOrder> {
@@ -150,9 +164,7 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         quotations.security = listOf(security)
         subscribe.quotations = quotations
 
-        val subscribeXml = JAXBUtils.marshall(subscribe)
-        val subscribeResultXml = TXmlConnector.sendCommand(subscribeXml)
-        checkResult(subscribeResultXml, "SUBSCRIBE PRICE (QUITATIONS)")
+        sendCommandAndCheckResult(subscribe)
     }
 
     private fun unsubscribePrice(ticker: Ticker) {
@@ -164,8 +176,7 @@ class TransaqTradingApi(val memory: TransaqMemory): TradingApi {
         security.board = tickerInfo.board
         quotations.security = listOf(security)
         unsubscribe.quotations = quotations
-        val unsubscribeXml = JAXBUtils.marshall(unsubscribe)
-        val unsubscribeResultXml = TXmlConnector.sendCommand(unsubscribeXml)
-        checkResult(unsubscribeResultXml, "UNSUBSCRIBE PRICE (QUITATIONS)")
+
+        sendCommandAndCheckResult(unsubscribe)
     }
 }

@@ -7,7 +7,7 @@ import org.cryptolosers.trading.model.Session
 import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.FinamFutureInstrument
-import org.cryptolosers.transaq.connector.concurrent.InternalTransaqConnector
+import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import kotlin.concurrent.thread
 
 /**
@@ -18,7 +18,7 @@ import kotlin.concurrent.thread
  * - insert your login and password (of Finam Transaq connector) to config/terminalConfig.json
  */
 suspend fun main() {
-    val conn  = Connector(InternalTransaqConnector())
+    val conn  = Connector(TransaqConnector())
     conn.connect()
 
     thread {

@@ -2,12 +2,10 @@ package org.cryptolosers.trading.connector
 
 import org.cryptolosers.trading.TradingApi
 
-interface InternalTerminalConnector {
+interface TerminalConnector {
     fun connect()
-    fun softReconnect()
-    fun hardReconnect()
     fun isConnected(): ConnectionStatus
-    fun setConnectionListener(runnable: Runnable?)
+//    fun setConnectionListener(runnable: Runnable?)
 
     fun changePassword(newPassword: String)
 

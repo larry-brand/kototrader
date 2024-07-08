@@ -24,26 +24,33 @@ class OrdersHandler(val memory: TransaqMemory) {
         if (orders.order != null) {
             for ((oIndex, o) in orders.order.withIndex()) {
                 for (mo in memoryOrders.order) {
-                    if (o.transactionid == mo.transactionid) { // may be orderno
+                    if (o.transactionid == mo.transactionid && o.status != "cancelled") { // may be orderno
                         memoryOrders.order[oIndex] = o
+                    } else if (o.transactionid == mo.transactionid && o.status == "cancelled") {
+                        memoryOrders.order[oIndex] = null
                     } else {
                         memoryOrders.order.add(o)
                     }
                 }
             }
         }
+        memoryOrders.order.removeIf { it == null }
 
         if (orders.stoporder != null) {
             for ((oIndex, o) in orders.stoporder.withIndex()) {
                 for (mo in memoryOrders.stoporder) {
-                    if (o.transactionid == mo.transactionid) {
+                    if (o.transactionid == mo.transactionid && o.status != "cancelled") {
                         memoryOrders.stoporder[oIndex] = o
+                    } else if (o.transactionid == mo.transactionid && o.status == "cancelled") {
+                        memoryOrders.stoporder[oIndex] = null
                     } else {
                         memoryOrders.stoporder.add(o)
                     }
                 }
             }
         }
+        memoryOrders.stoporder.removeIf { it == null }
+
         memory.orders.set(memoryOrders)
 
         // signalAll threads which called tradingApi.sendOrder and was blocked

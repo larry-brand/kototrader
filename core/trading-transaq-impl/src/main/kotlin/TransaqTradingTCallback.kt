@@ -13,7 +13,7 @@ import javax.xml.bind.JAXBContext
 import javax.xml.bind.JAXBException
 import kotlin.math.absoluteValue
 
-class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
+class TransaqTradingTCallback(val memory: TransaqMemory) : TCallback {
 
     private val ordersHandler = OrdersHandler(memory)
     private val quotationsHandler = QuotationsHandler(memory)
@@ -91,7 +91,7 @@ class TransaqTradingApiTCallback(val memory: TransaqMemory) : TCallback {
                 val transaqInfo = TransaqTickerInfo(
                     tickerInfo = info,
                     secCode = s.seccode!!,
-                    market = s.market!!,
+                    market = s.market!!.toLong(),
                     board = s.board!!,
                     decimals = s.decimals!!,
                     minstep = s.minstep!!,

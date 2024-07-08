@@ -2,9 +2,12 @@ package org.cryptolosers.trading.connector
 
 import org.cryptolosers.trading.TradingApi
 
-class Connector(val internalTerminalConnector: InternalTerminalConnector, val reconnectRunnable: ReconnectThread = ReconnectThread(internalTerminalConnector)) {
+class Connector(
+    private val terminalConnector: TerminalConnector,
+    private val reconnectRunnable: ReconnectThread = ReconnectThread(terminalConnector)
+) {
 
-    var reconnectThread: Thread? = null
+    private var reconnectThread: Thread? = null
 
     fun connect() {
         reconnectThread = Thread(reconnectRunnable)
@@ -15,7 +18,7 @@ class Connector(val internalTerminalConnector: InternalTerminalConnector, val re
     }
 
     fun changePassword(newPassword: String) {
-        internalTerminalConnector.changePassword(newPassword)
+        terminalConnector.changePassword(newPassword)
     }
 
     fun abort() {
@@ -23,7 +26,7 @@ class Connector(val internalTerminalConnector: InternalTerminalConnector, val re
     }
 
     fun tradingApi(): TradingApi {
-        return internalTerminalConnector.tradingApi()
+        return terminalConnector.tradingApi()
     }
 
 }

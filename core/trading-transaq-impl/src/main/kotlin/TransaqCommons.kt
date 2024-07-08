@@ -28,7 +28,7 @@ val FinamErrorInstrument: InstrumentType = "ERROR"
 data class TransaqTickerInfo(
     val tickerInfo: TickerInfo,
     val secCode: String,
-    val market: String,
+    val market: Long,
     val board: String,
     val decimals: Long,
     val minstep: BigDecimal,
