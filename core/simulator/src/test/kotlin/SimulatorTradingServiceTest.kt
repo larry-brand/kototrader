@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-class SimulatorTradingApiTest {
+class SimulatorTradingServiceTest {
 
     val startDate = LocalDateTime.parse("2021-01-03 00:00:00", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_FRIENDLY_PATTERN))
     val endDate = LocalDateTime.parse("2021-12-28 23:00:00", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_FRIENDLY_PATTERN))

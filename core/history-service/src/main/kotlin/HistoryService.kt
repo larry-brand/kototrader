@@ -65,9 +65,9 @@ class HistoryService: HistoryApi {
             throw IllegalArgumentException()
         }
         // force download 1 year if start date is current year
-        if (startDate.year == LocalDateTime.now().year) {
-            downloadHistoryMinHourDayInternal(startDate.toLocalDate(), LocalDate.now(), tickerId, timeframe)
-        }
+//        if (startDate.year == LocalDateTime.now().year) {
+//            downloadHistoryMinHourDayInternal(startDate.toLocalDate(), LocalDate.now(), tickerId, timeframe)
+//        }
         val years = ChronoUnit.YEARS.between(
             startDate.atZone(ZoneId.systemDefault()),
             endDate.atZone(ZoneId.systemDefault())
@@ -179,17 +179,33 @@ class HistoryService: HistoryApi {
             for (iYear in startDate.year ..endDate.year) {
                 val expFile = HistoryFile(tickerId, timeframe, iYear)
                 if (!expFile.exists() || (expFile.supportedNowDate() && !expFile.ifDateNowExists())) {
-                    val firstDateOfYear = LocalDate.parse("$iYear$MMDD_FIRST", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
-                    val lastDateOfYear = LocalDate.parse("$iYear$MMDD_LAST", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
-
-                    val bytes = runWithRetries(maxRetriesDownloadCalls) {
-                        api.download(tickerId, timeframe, firstDateOfYear, lastDateOfYear)
+                    val (startMonth, endMonth) = if (iYear == startDate.year && iYear == endDate.year) {
+                        Pair(startDate.monthValue, endDate.monthValue)
+                    } else if (iYear == startDate.year) {
+                        Pair(startDate.monthValue, 12)
+                    } else if (iYear == endDate.year) {
+                        Pair(1, endDate.monthValue)
+                    } else {
+                        Pair(1, 12)
                     }
-                    val candles = api.parseBytesToCandles(bytes)
-                    if (candles.isNotEmpty()) {
-                        val tmpFile = HistoryTmpFile(tickerId, timeframe, iYear)
-                        tmpFile.save(candles)
-                        tmpFile.renameToOkFile()
+                    for (iMonth in startMonth .. endMonth) {
+                        val iMonthWithZero = if (iMonth <= 9) {
+                            "0$iMonth"
+                        } else {
+                            iMonth.toString()
+                        }
+                        val firstDateOfMonth = LocalDate.parse("$iYear$iMonthWithZero" + "01", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
+                        val lastDateOfMonth = LocalDate.parse("$iYear$iMonthWithZero" + "31", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
+
+                        val bytes = runWithRetries(maxRetriesDownloadCalls) {
+                            api.download(tickerId, timeframe, firstDateOfMonth, lastDateOfMonth)
+                        }
+                        val candles = api.parseBytesToCandles(bytes)
+                        if (candles.isNotEmpty()) {
+                            val tmpFile = HistoryTmpFile(tickerId, timeframe, iYear)
+                            tmpFile.save(candles)
+                            tmpFile.renameToOkFile()
+                        }
                     }
                 } else {
                     logger.debug { "Data for ticker=${tickerId.name} [$startDate-$endDate] won't be downloaded, because data exists" }

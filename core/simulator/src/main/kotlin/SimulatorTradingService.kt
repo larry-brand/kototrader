@@ -10,9 +10,9 @@ import java.time.LocalDateTime
 import kotlin.math.absoluteValue
 
 
-class SimulatorTradingApi(money: BigDecimal, val historyApi: HistoryApi): TradingApi {
+class SimulatorTradingService(money: BigDecimal, val historyApi: HistoryApi): TradingApi {
 
-    var now = LocalDateTime.now()
+    lateinit var now: LocalDateTime
     var nowPrice = BigDecimal(0)
     private val comissionPunkts = BigDecimal(0.04)
     private val wallet = Wallet(money)
@@ -55,7 +55,7 @@ class SimulatorTradingApi(money: BigDecimal, val historyApi: HistoryApi): Tradin
         val takeSize = if (candles.size >= candlesCount) {
             candles.size
         } else {
-            logger.warn { "Can not load candles with requested size, probably invalid size" }
+            //logger.warn { "Can not load candles with requested size, probably invalid size" }
             candlesCount
         }
         return candles.takeLast(takeSize).map {

@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 class HistorySimulator {
 
     private val historyService = HistoryService()
-    val tradingApi = SimulatorTradingApi(INITIAL_MONEY, historyService)
+    val tradingApi = SimulatorTradingService(INITIAL_MONEY, historyService)
 
     companion object {
         val INITIAL_MONEY = BigDecimal(100_000)
@@ -25,6 +25,7 @@ class HistorySimulator {
     ) {
 
         val onNextCandleUpdated: (HistoryCandle) -> Unit = {
+            tradingApi.now = it.timestamp
             tradingApi.nowPrice = it.closePrice
             onNextCandle(it)
         }
