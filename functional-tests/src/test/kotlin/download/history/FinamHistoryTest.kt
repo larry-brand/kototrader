@@ -28,7 +28,7 @@ class FinamHistoryTest {
         val startDate = LocalDate.parse("2021-12-28", DateTimeFormatter.ofPattern(LOCAL_DATE_FRIENDLY_PATTERN))
         val endDate = LocalDate.parse("2021-12-28", DateTimeFormatter.ofPattern(LOCAL_DATE_FRIENDLY_PATTERN))
 
-        val downloaded: ByteArray = api.download(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate)
+        val downloaded: ByteArray = api.download(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate)
 
         val s = String(downloaded)
         for (i in 0 until s.lines().size - 1) {
@@ -41,7 +41,7 @@ class FinamHistoryTest {
         val api: DownloadHistoryApi = FinamDownloadHistoryService()
         val startDate = LocalDate.parse("2021-12-28", DateTimeFormatter.ofPattern(LOCAL_DATE_FRIENDLY_PATTERN))
         val endDate = LocalDate.parse("2021-12-28", DateTimeFormatter.ofPattern(LOCAL_DATE_FRIENDLY_PATTERN))
-        val downloaded: ByteArray = api.download(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate)
+        val downloaded: ByteArray = api.download(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate)
 
         val parsed = api.parseBytesToCandles(downloaded)
 

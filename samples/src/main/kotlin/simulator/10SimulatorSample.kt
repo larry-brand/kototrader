@@ -25,7 +25,7 @@ fun main() {
     val startDate = LocalDateTime.parse("2019-01-03 00:00:00", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_FRIENDLY_PATTERN))
     val endDate = LocalDateTime.parse("2021-12-28 23:00:00", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_FRIENDLY_PATTERN))
 
-    simulator.runOnCandles(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate) {
+    simulator.runOnCandles(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate) {
         runBlocking {
             robot.onNextMinuteCandle(it, simulator.tradingApi)
         }

@@ -65,7 +65,7 @@ open class HistoryServiceTest {
             count++
         }
 
-        service.runOnCandles(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate, robot)
+        service.runOnCandles(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate, robot)
         count shouldBe 2
     }
 
@@ -75,7 +75,7 @@ open class HistoryServiceTest {
         mockkConstructor(HistoryFile::class)
         every { anyConstructed<HistoryFile>().bufferedReader() } returns BufferedReader(StringReader(BIN_DATA))
 
-        val candles = service.readCandles(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate)
+        val candles = service.readCandles(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate)
 
         candles.size shouldBe 2
         candles[0].timestamp shouldBe LocalDateTime.parse("20210108 110000", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_PATTERN))

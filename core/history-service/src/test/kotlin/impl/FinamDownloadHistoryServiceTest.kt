@@ -36,7 +36,7 @@ class FinamDownloadHistoryServiceTest {
 
         val startDate = LocalDate.parse("20210108", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
         val endDate = LocalDate.parse("20210110", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
-        val bytes = service.download(HistoryTickerId("BR"), Timeframe.ONE_HOUR, startDate, endDate)
+        val bytes = service.download(HistoryTickerId("BR"), Timeframe.HOUR1, startDate, endDate)
 
         bytes shouldBe "data_for_my_url".toByteArray()
     }

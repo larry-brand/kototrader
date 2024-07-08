@@ -209,7 +209,7 @@ class HistoryService: HistoryApi {
                 val firstDateOfYear = LocalDate.parse("$iYear$MMDD_FIRST", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
                 val lastDateOfYear = LocalDate.parse("$iYear$MMDD_LAST", DateTimeFormatter.ofPattern(LOCAL_DATE_PATTERN))
                 val bytes = runWithRetries(maxRetriesDownloadCalls) {
-                    api.download(tickerId, Timeframe.ONE_DAY, firstDateOfYear, lastDateOfYear)
+                    api.download(tickerId, Timeframe.DAY1, firstDateOfYear, lastDateOfYear)
                 }
                 val candles = api.parseBytesToCandles(bytes)
                 if (candles.isNotEmpty()) {

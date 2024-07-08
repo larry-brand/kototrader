@@ -1,7 +1,6 @@
 package org.cryptolosers.trading.model
 
 import java.math.BigDecimal
-import java.time.Instant
 import java.time.LocalDateTime
 
 data class PriceInfo(val lastPrice: BigDecimal, val bidPrice: BigDecimal, val askPrice: BigDecimal)

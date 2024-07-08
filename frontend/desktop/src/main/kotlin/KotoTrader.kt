@@ -13,7 +13,6 @@ import org.jfree.chart.axis.ValueAxis
 import org.jfree.chart.plot.XYPlot
 import org.jfree.chart.renderer.xy.CandlestickRenderer
 import org.jfree.chart.renderer.xy.XYShapeRenderer
-import org.jfree.data.time.Day
 import org.jfree.data.time.Minute
 import org.jfree.data.time.TimeSeries
 import org.jfree.data.time.TimeSeriesCollection
@@ -34,7 +33,7 @@ class HighLowChartExample(title: String?) : JFrame(title) {
     private val topPanel: JPanel
     private val chartPanel: ChartPanel
     private var tickerName: String
-    private var timeframe = Timeframe.ONE_DAY
+    private var timeframe = Timeframe.DAY1
     private var startDate = LocalDateTime.now().minusYears(1)
 
     init {
@@ -141,9 +140,9 @@ class HighLowChartExample(title: String?) : JFrame(title) {
         }
         buttonBackground(oneDay)
 
-        fifteenMin.addActionListener { timeframe = Timeframe.FIFTEEN_MIN; updateChart(tickerName); buttonBackground(fifteenMin) }
-        oneHour.addActionListener { timeframe = Timeframe.ONE_HOUR; updateChart(tickerName); buttonBackground(oneHour) }
-        oneDay.addActionListener { timeframe = Timeframe.ONE_DAY; updateChart(tickerName); buttonBackground(oneDay) }
+        fifteenMin.addActionListener { timeframe = Timeframe.MIN15; updateChart(tickerName); buttonBackground(fifteenMin) }
+        oneHour.addActionListener { timeframe = Timeframe.HOUR1; updateChart(tickerName); buttonBackground(oneHour) }
+        oneDay.addActionListener { timeframe = Timeframe.DAY1; updateChart(tickerName); buttonBackground(oneDay) }
 
         topPanel.add(JLabel("      Timeframe "))
         topPanel.add(fifteenMin)

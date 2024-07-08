@@ -34,7 +34,7 @@ class SimulatorTradingApiTest {
         every { anyConstructed<HistoryFile>().bufferedReader() } returns BufferedReader(StringReader(BIN_DATA))
         var sended = false
 
-        simulator.runOnCandles(HistoryTickerId("BR1"), Timeframe.ONE_HOUR, startDate, endDate) {
+        simulator.runOnCandles(HistoryTickerId("BR1"), Timeframe.HOUR1, startDate, endDate) {
             runBlocking {
                 if (!sended)
                     simulator.tradingApi.sendOrder(

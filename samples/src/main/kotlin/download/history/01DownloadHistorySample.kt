@@ -10,5 +10,5 @@ import org.cryptolosers.history.Timeframe
  */
 fun main() {
     val service = HistoryService()
-    service.downloadFullHistory(HistoryTickerId("Si"), Timeframe.ONE_DAY)
+    service.downloadFullHistory(HistoryTickerId("Si"), Timeframe.DAY1)
 }

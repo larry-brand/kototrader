@@ -93,7 +93,7 @@ class HistoryFile : ProjectHomeFile {
                         BigDecimal(words[3]),
                         BigDecimal(words[4]),
                         BigDecimal(words[5]),
-                        words[6].toInt()
+                        words[6].toLong()
                     )
                 )
             }

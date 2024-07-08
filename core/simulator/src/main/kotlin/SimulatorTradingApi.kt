@@ -1,5 +1,8 @@
 package org.cryptolosers.simulator
 
+import mu.KotlinLogging
+import org.cryptolosers.history.HistoryApi
+import org.cryptolosers.history.HistoryTickerId
 import org.cryptolosers.trading.TradingApi
 import org.cryptolosers.trading.model.*
 import java.math.BigDecimal
@@ -7,13 +10,15 @@ import java.time.LocalDateTime
 import kotlin.math.absoluteValue
 
 
-class SimulatorTradingApi(money: BigDecimal): TradingApi {
+class SimulatorTradingApi(money: BigDecimal, val historyApi: HistoryApi): TradingApi {
 
+    var now = LocalDateTime.now()
     var nowPrice = BigDecimal(0)
     private val comissionPunkts = BigDecimal(0.04)
     private val wallet = Wallet(money)
     private var positionBR: Position? = null
     var dials = 0
+    private val logger = KotlinLogging.logger {}
 
     override suspend fun getAllTickers(): List<TickerInfo> {
         TODO("Not yet implemented")
@@ -36,7 +41,33 @@ class SimulatorTradingApi(money: BigDecimal): TradingApi {
     }
 
     override suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session): List<Candle> {
-        TODO("Not yet implemented")
+        val sessionStarted = now.withHour(10).withMinute(0)
+        val sessionEnd = now.withHour(23).withMinute(59)
+        val historyTimeframe = when (timeframe) {
+            Timeframe.MIN1 -> org.cryptolosers.history.Timeframe.MIN1
+            Timeframe.MIN5 -> org.cryptolosers.history.Timeframe.MIN5
+            Timeframe.MIN15 -> org.cryptolosers.history.Timeframe.MIN15
+            Timeframe.HOUR1 -> org.cryptolosers.history.Timeframe.HOUR1
+            Timeframe.DAY1 -> org.cryptolosers.history.Timeframe.DAY1
+            else -> throw IllegalStateException("Unsupported timeframe")
+        }
+        val candles = historyApi.readCandles(HistoryTickerId(ticker.symbol), historyTimeframe, sessionStarted, now)
+        val takeSize = if (candles.size >= candlesCount) {
+            candles.size
+        } else {
+            logger.warn { "Can not load candles with requested size, probably invalid size" }
+            candlesCount
+        }
+        return candles.takeLast(takeSize).map {
+            Candle(
+                timestamp = it.timestamp,
+                openPrice = it.openPrice,
+                highPrice = it.highPrice,
+                lowPrice = it.lowPrice,
+                closePrice = it.closePrice,
+                volume = it.volume
+            )
+        }
     }
 
     override suspend fun sendOrder(order: IOrder) {

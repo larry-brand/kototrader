@@ -15,7 +15,7 @@ const val LOCAL_DATE_TIME_FRIENDLY_PATTERN = "yyyy-MM-dd HH:mm:ss"
 
 enum class Timeframe(val str: String) {
 
-    TIKS("tiks"), ONE_MIN("M1"), FIVE_MIN("M5"), FIFTEEN_MIN("M15"), THIRTY_MIN("M30"), ONE_HOUR("H1"), ONE_DAY("D1");
+    TIKS("tiks"), MIN1("M1"), MIN5("M5"), MIN15("M15"), MIN30("M30"), HOUR1("H1"), DAY1("D1");
 
     override fun toString(): String {
         return str
@@ -30,7 +30,7 @@ data class HistoryCandle(
     val highPrice: BigDecimal,
     val lowPrice: BigDecimal,
     val closePrice: BigDecimal,
-    val volume: Int
+    val volume: Long
 ) {
     override fun toString(): String {
         val timestampString = DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_PATTERN).withZone(ZoneOffset.UTC).format(timestamp)

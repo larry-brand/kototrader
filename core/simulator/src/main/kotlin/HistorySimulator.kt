@@ -9,8 +9,8 @@ import java.time.LocalDateTime
 
 class HistorySimulator {
 
-    val tradingApi = SimulatorTradingApi(INITIAL_MONEY)
     private val historyService = HistoryService()
+    val tradingApi = SimulatorTradingApi(INITIAL_MONEY, historyService)
 
     companion object {
         val INITIAL_MONEY = BigDecimal(100_000)

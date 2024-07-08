@@ -9,31 +9,31 @@ interface HistoryApi {
 
     fun downloadHistory(
         tickerId: HistoryTickerId,
-        periodicity: Timeframe,
+        timeframe: Timeframe,
         startDate: LocalDate,
         endDate: LocalDate,
     )
 
     fun downloadFullHistory(
         tickerId: HistoryTickerId,
-        periodicity: Timeframe
+        timeframe: Timeframe
     )
 
     fun readCandles(
         tickerId: HistoryTickerId,
-        periodicity: Timeframe,
+        timeframe: Timeframe,
         startDate: LocalDateTime,
         endDate: LocalDateTime,
     ): List<HistoryCandle>
 
     fun readFullCandles(
         tickerId: HistoryTickerId,
-        periodicity: Timeframe
+        timeframe: Timeframe
     ): List<HistoryCandle>
 
     fun runOnCandles(
         tickerId: HistoryTickerId,
-        periodicity: Timeframe,
+        timeframe: Timeframe,
         startDate: LocalDateTime,
         endDate: LocalDateTime,
         onNextCandle: (HistoryCandle) -> Unit

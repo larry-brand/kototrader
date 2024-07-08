@@ -16,7 +16,7 @@ fun main() {
     val service = HistoryService()
     val startDate = LocalDateTime.parse("20210108 100100", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_PATTERN))
     val endDate = LocalDateTime.parse("20220110 220100", DateTimeFormatter.ofPattern(LOCAL_DATE_TIME_PATTERN))
-    val candles = service.readCandles(HistoryTickerId("Si"), Timeframe.ONE_DAY,  startDate, endDate)
+    val candles = service.readCandles(HistoryTickerId("Si"), Timeframe.DAY1,  startDate, endDate)
     println(candles.size)
 
     var ohlcv: MutableList<MutableList<BigDecimal>> = mutableListOf()

@@ -50,12 +50,12 @@ class FinamDownloadHistoryService : DownloadHistoryApi {
         val finamDateFormat = "dd.MM.yyyy"
         val finamPeriodicity = when (periodicity) {
             Timeframe.TIKS -> "1"
-            Timeframe.ONE_MIN -> "2"
-            Timeframe.FIVE_MIN -> "3"
-            Timeframe.FIFTEEN_MIN -> "5"
-            Timeframe.THIRTY_MIN -> "6"
-            Timeframe.ONE_HOUR -> "7"
-            Timeframe.ONE_DAY -> "8"
+            Timeframe.MIN1 -> "2"
+            Timeframe.MIN5 -> "3"
+            Timeframe.MIN15 -> "5"
+            Timeframe.MIN30 -> "6"
+            Timeframe.HOUR1 -> "7"
+            Timeframe.DAY1 -> "8"
         }
         val finamDatf = when (periodicity) {
             Timeframe.TIKS -> "6"
@@ -90,7 +90,7 @@ class FinamDownloadHistoryService : DownloadHistoryApi {
                 highPrice = elements[5].toBigDecimal().stripTrailingZeros(),
                 lowPrice = elements[6].toBigDecimal().stripTrailingZeros(),
                 closePrice = elements[7].toBigDecimal().stripTrailingZeros(),
-                volume = elements[8].toInt()
+                volume = elements[8].toLong()
             )
             result.add(candle)
         }
