@@ -86,11 +86,11 @@ class TransaqTradingService(val memory: TransaqMemory): TradingApi {
             candlesCount
         }
         when (session) {
-            Session.CURRENT_AND_PREVIOUS -> return candles.takeLast(takeSize)
+            Session.CURRENT_AND_PREVIOUS -> return candles.takeLast(takeSize).sortedBy { it.timestamp }
             Session.CURRENT -> {
                 val now = LocalDateTime.now(ZoneId.of("Europe/Moscow"))
                 val sessionStarted = now.withHour(10).withMinute(0)
-                return candles.takeLast(candlesCount).filter { it.timestamp >= sessionStarted }
+                return candles.takeLast(candlesCount).filter { it.timestamp >= sessionStarted }.sortedBy { it.timestamp }
             }
         }
 

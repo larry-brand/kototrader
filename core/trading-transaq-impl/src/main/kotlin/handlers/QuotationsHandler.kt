@@ -25,18 +25,22 @@ class QuotationsHandler(val memory: TransaqMemory) {
                 secCode = quotations.quotation.seccode,
                 board = quotations.quotation.board
             )]!!.tickerInfo.ticker
-            val price = PriceInfo(
-                lastPrice = quotations.quotation.last ?: quotations.quotation.offer, //quotations.quotation.last can be null
-                bidPrice = quotations.quotation.bid,
-                askPrice = quotations.quotation.offer
-            )
-            memory.priceMap[ticker]!!.priceInfo = price
-            memory.priceMap[ticker]!!.subscribed = true
-            TransaqPriceInfo.signalAll(ticker, memory)
+            if (quotations.quotation.bid != null && quotations.quotation.offer != null) {
+                val price = PriceInfo(
+                    lastPrice = quotations.quotation.last ?: quotations.quotation.offer ?: quotations.quotation.bid, //quotations.quotation.last can be null
+                    bidPrice = quotations.quotation.bid,
+                    askPrice = quotations.quotation.offer
+                )
+                memory.priceMap[ticker]!!.priceInfo = price
+                memory.priceMap[ticker]!!.subscribed = true
 
-            memory.priceChangesListenerMap[ticker]?.let { priceChangesListener ->
-                priceChangesListener(price)
+                memory.priceChangesListenerMap[ticker]?.let { priceChangesListener ->
+                    priceChangesListener(price)
+                }
+            } else {
+                logger.error { "Bid: ${quotations.quotation.bid} , ask: ${quotations.quotation.offer} can not be null in ticker: $ticker, time: ${quotations.quotation.time}" }
             }
+            TransaqPriceInfo.signalAll(ticker, memory)
         }
     }
 }

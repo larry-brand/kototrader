@@ -6,6 +6,7 @@ import org.cryptolosers.transaq.SecCodeBoard
 import org.cryptolosers.transaq.TransaqMemory
 import org.cryptolosers.transaq.connector.concurrent.Transaction
 import org.cryptolosers.transaq.xml.callback.Orders
+import java.math.BigDecimal
 
 class OrdersHandler(val memory: TransaqMemory) {
     private val logger = KotlinLogging.logger {}
@@ -21,15 +22,24 @@ class OrdersHandler(val memory: TransaqMemory) {
     private fun handleInternal(orders: Orders) {
         // map to transaq model
         val memoryOrders = memory.orders.get()
+        if (memoryOrders.order == null) {
+            memoryOrders.order = mutableListOf()
+        }
+        if (memoryOrders.stoporder == null) {
+            memoryOrders.stoporder = mutableListOf()
+        }
         if (orders.order != null) {
             for ((oIndex, o) in orders.order.withIndex()) {
+                if (o.status != "cancelled" || o.status != "disabled") {
+                    memoryOrders.order.add(o)
+                }
                 for (mo in memoryOrders.order) {
-                    if (o.transactionid == mo.transactionid && o.status != "cancelled") { // may be orderno
+                    if (o.transactionid == mo.transactionid && (o.status != "cancelled" || o.status != "disabled")) { // may be orderno
                         memoryOrders.order[oIndex] = o
-                    } else if (o.transactionid == mo.transactionid && o.status == "cancelled") {
+                    } else if (o.transactionid == mo.transactionid && (o.status != "cancelled" || o.status != "disabled")) {
                         memoryOrders.order[oIndex] = null
                     } else {
-                        memoryOrders.order.add(o)
+
                     }
                 }
             }
@@ -38,18 +48,21 @@ class OrdersHandler(val memory: TransaqMemory) {
 
         if (orders.stoporder != null) {
             for ((oIndex, o) in orders.stoporder.withIndex()) {
+                if (o.status != "cancelled" || o.status != "disabled") {
+                    memoryOrders.stoporder.add(o)
+                }
                 for (mo in memoryOrders.stoporder) {
-                    if (o.transactionid == mo.transactionid && o.status != "cancelled") {
+                    if (o.transactionid == mo.transactionid && (o.status != "cancelled" || o.status != "disabled")) {
                         memoryOrders.stoporder[oIndex] = o
-                    } else if (o.transactionid == mo.transactionid && o.status == "cancelled") {
+                    } else if (o.transactionid == mo.transactionid && (o.status == "cancelled" || o.status != "disabled")) {
                         memoryOrders.stoporder[oIndex] = null
                     } else {
-                        memoryOrders.stoporder.add(o)
+
                     }
                 }
             }
         }
-        memoryOrders.stoporder.removeIf { it == null }
+        memoryOrders.stoporder?.removeIf { it == null }
 
         memory.orders.set(memoryOrders)
 
@@ -72,9 +85,12 @@ class OrdersHandler(val memory: TransaqMemory) {
         val limitOrdersMapped = memoryOrders.order.mapNotNull {
             runCatching {
                 mapLimitOrder(it, memoryOrders)
-            }.getOrDefault(null)
+            }.getOrElse {
+                logger.error(it) { "Can not map stop order" }
+                null
+            }
         }
-        val stopOrdersMapped = memoryOrders.stoporder.mapNotNull {
+        val stopOrdersMapped= memoryOrders.stoporder.mapNotNull {
             runCatching {
                 if (it.stoploss != null && it.takeprofit == null) {
                     mapStopLossOrder(it, memoryOrders)
@@ -89,7 +105,10 @@ class OrdersHandler(val memory: TransaqMemory) {
                 } else {
                     throw IllegalStateException("Can not find stopLoss or takeProfit")
                 }
-            }.getOrDefault(null)
+            }.getOrElse {
+                logger.error(it) { "Can not map takeProfit order" }
+                null
+            }
         }
         memory.ordersMapped.set(limitOrdersMapped + stopOrdersMapped)
     }
@@ -103,7 +122,6 @@ class OrdersHandler(val memory: TransaqMemory) {
             ticker = ticker,
             size = order.quantity,
             orderDirection = getOrderDirection(order.buysell),
-            orderId = order.orderno.toString(),
             price = order.price
         )
     }
@@ -113,13 +131,18 @@ class OrdersHandler(val memory: TransaqMemory) {
             secCode = stopOrder.seccode,
             board = stopOrder.board
         )]!!.tickerInfo.ticker
+        val slippage = if (stopOrder.stoploss.orderprice != null) {
+            (stopOrder.stoploss.orderprice - stopOrder.stoploss.activationprice).abs()
+        } else {
+            BigDecimal.ZERO
+        }
+
         return StopOrder(
             ticker = ticker,
             size = getSizeStopOrder(stopOrder, memoryOrders),
             orderDirection = getOrderDirection(stopOrder.buysell),
-            orderId = stopOrder.activeorderno.toString(),
             activationPrice = stopOrder.stoploss.activationprice,
-            slippage = (stopOrder.stoploss.orderprice - stopOrder.stoploss.activationprice).abs()
+            slippage = slippage
         )
     }
 
@@ -130,9 +153,8 @@ class OrdersHandler(val memory: TransaqMemory) {
         )]!!.tickerInfo.ticker
         return TakeprofitOrder(
             ticker = ticker,
-            size = getSizeStopOrder(stopOrder, memoryOrders),
+            size = getSizeTakeProfitrder(stopOrder, memoryOrders),
             orderDirection = getOrderDirection(stopOrder.buysell),
-            orderId = stopOrder.activeorderno.toString(),
             activationPrice = stopOrder.takeprofit.activationprice,
         )
     }
@@ -148,6 +170,16 @@ class OrdersHandler(val memory: TransaqMemory) {
     private fun getSizeStopOrder(stopOrder: org.cryptolosers.transaq.xml.callback.internal.StopOrder, memoryOrders: Orders): Long {
         return if (stopOrder.stoploss.quantity.toLongOrNull() != null) {
             stopOrder.stoploss.quantity.toLong()
+        } else {
+            val limitOrder = memoryOrders.order.firstOrNull { limitOrder -> limitOrder.orderno == stopOrder.linkedorderno }
+                ?: throw IllegalStateException("Can not find original order for stop order by linkedorderno")
+            limitOrder.quantity
+        }
+    }
+
+    private fun getSizeTakeProfitrder(stopOrder: org.cryptolosers.transaq.xml.callback.internal.StopOrder, memoryOrders: Orders): Long {
+        return if (stopOrder.takeprofit.quantity.toLongOrNull() != null) {
+            stopOrder.takeprofit.quantity.toLong()
         } else {
             val limitOrder = memoryOrders.order.firstOrNull { limitOrder -> limitOrder.orderno == stopOrder.linkedorderno }
                 ?: throw IllegalStateException("Can not find original order for stop order by linkedorderno")

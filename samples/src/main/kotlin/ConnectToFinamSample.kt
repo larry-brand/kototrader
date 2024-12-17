@@ -2,10 +2,7 @@ package org.cryptolosers.samples
 
 import kotlinx.coroutines.runBlocking
 import org.cryptolosers.trading.connector.Connector
-import org.cryptolosers.trading.model.Exchange_MOEX_FORTS
-import org.cryptolosers.trading.model.Session
-import org.cryptolosers.trading.model.Ticker
-import org.cryptolosers.trading.model.Timeframe
+import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.FinamFutureInstrument
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import kotlin.concurrent.thread
@@ -20,10 +17,11 @@ import kotlin.concurrent.thread
 suspend fun main() {
     val conn  = Connector(TransaqConnector())
     conn.connect()
+    val tradingApi = conn.tradingApi()
 
     thread {
         runBlocking {
-            val tickers = conn.tradingApi().getAllTickers()
+            val tickers = tradingApi.getAllTickers()
                 .filter { it.ticker.symbol.startsWith("Si") && it.type == FinamFutureInstrument }
             println("Tickers:")
             tickers.forEach {
@@ -31,26 +29,26 @@ suspend fun main() {
             }
 
             println("Positions:")
-            conn.tradingApi().getAllOpenPositions().forEach {
+            tradingApi.getAllOpenPositions().forEach {
                 println(it)
             }
 
             println("Orders:")
-            conn.tradingApi().getAllOrders().forEach {
+            tradingApi.getAllOrders().forEach {
                 println(it)
             }
 
-            conn.tradingApi().subscribePriceChanges(Ticker("SiU4", Exchange_MOEX_FORTS)) {
+            tradingApi.subscribePriceChanges(Ticker("SiZ4", Exchanges.MOEX_FORTS)) {
                 println("Subscribed $it")
             }
 
             println("LastCandles:")
-            conn.tradingApi().getLastCandles(Ticker("SiU4", Exchange_MOEX_FORTS), Timeframe.MIN5, 3, Session.CURRENT_AND_PREVIOUS).forEach {
+            tradingApi.getLastCandles(Ticker("SiZ4", Exchanges.MOEX_FORTS), Timeframe.MIN15, 10, Session.CURRENT_AND_PREVIOUS).forEach {
                 println(it)
             }
 
 //            println("Price:")
-//            conn.tradingApi().getPrice(Ticker("SiU4", Exchange_MOEX_FORTS)).let {
+//            tradingApi.getPrice(Ticker("SiZ4", Exchange_MOEX_FORTS)).let {
 //                println(it)
 //            }
         }
