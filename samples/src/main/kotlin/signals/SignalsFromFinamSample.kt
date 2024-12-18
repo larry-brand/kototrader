@@ -11,8 +11,10 @@ import org.cryptolosers.transaq.FinamFutureInstrument
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 /**
@@ -26,16 +28,17 @@ suspend fun main() {
     val conn  = Connector(TransaqConnector())
     conn.connect()
     val tradingApi: ViewTradingApi = conn.tradingApi()
-    //val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL", "SVCB")
+    val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL", "SVCB")
 
     thread {
         runBlocking {
+            while (true) {
             val volumeIndicators = VolumeIndicators(tradingApi)
-            println("Run indicators:")
+            println("\nRun indicators:")
             val startTime = System.currentTimeMillis()
             val executorService = Executors.newFixedThreadPool(5)
 
-            val printSignals = mutableListOf<TickerWithIndicator>()
+            val printSignals = Collections.synchronizedList(ArrayList<TickerWithIndicator>())
             moexWatchList.forEach { t ->
                 executorService.submit {
                     runBlocking {
@@ -71,21 +74,6 @@ suspend fun main() {
                 println("Timeout reached before all tasks completed.")
             }
 
-//            val printSignals = moexWatchList.mapNotNull {
-//                val indicator = volumeIndicators.isBigVolumeOnStartSession(Ticker(it, Exchanges.MOEX), Timeframe.MIN15)
-//                if (indicator.isSignal) {
-//                    "Ticker: $it, volume change: ${indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}%, " +
-//                            "price change: ${indicator.priceChangePercentageInCandle?.toStringWithSign()}%"
-//                } else {
-//                    null
-//                }
-//            }
-//            println("Volume signals at 10:15, 15min bar: ")
-//            printSignals.forEach {
-//                println(it)
-//            }
-
-
             println("Volume signals at 10:15, 15min bar: ")
             printSignals.forEach {
                 println("${it.ticker.shortDescription}(${it.ticker.ticker.symbol}) " +
@@ -94,10 +82,12 @@ suspend fun main() {
             }
             println("Время работы загрузки свечей: " + ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек" )
 
+            delay(3000)
+            }
         }
     }
 
-    conn.abort()
+    //conn.abort()
 }
 
 fun BigDecimal.toStringWithSign(): String {
