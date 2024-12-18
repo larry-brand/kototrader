@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss} %-5level %logger{0} - %msg%n"/> <!-- [%t] -->
+        </Console>
+        <File name="Logfile" fileName="build/connector.log" immediateFlush="true" append="false">
+            <PatternLayout pattern="%d{HH:mm:ss} %-5level %logger{0} - %msg%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="DEBUG">
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="Logfile" level="DEBUG"/>
+        </Root>
+        <!-- DEBUG for log request+response -->
+        <Logger name="org.cryptolosers" additivity="false">
+            <AppenderRef ref="Console" level="INFO"/>
+            <AppenderRef ref="Logfile" level="DEBUG"/>
+        </Logger>
+
+    </Loggers>
+</Configuration>

@@ -21,7 +21,7 @@ suspend fun main() {
     val conn  = Connector(TransaqConnector())
     conn.connect()
     val tradingApi: ViewTradingApi = conn.tradingApi()
-    val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL")
+    //val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL")
 
     thread {
         runBlocking {
