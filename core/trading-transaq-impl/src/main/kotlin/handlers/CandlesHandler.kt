@@ -40,7 +40,7 @@ class CandlesHandler(val memory: TransaqMemory) {
             TransaqCandles(mutableListOf())
         }
 
-        val candlesMapped = candles.candle.mapNotNull {
+        val candlesMapped = (candles.candle ?: emptyList()).mapNotNull {
             runCatching {
                 val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
                 val timestamp = LocalDateTime.from(formatter.parse(it.date))

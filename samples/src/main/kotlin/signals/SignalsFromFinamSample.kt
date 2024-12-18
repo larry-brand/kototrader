@@ -1,13 +1,18 @@
 package org.cryptolosers.samples.signals
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import org.cryptolosers.indicators.TickerWithIndicator
 import org.cryptolosers.indicators.VolumeIndicators
+import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.FinamFutureInstrument
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -21,26 +26,73 @@ suspend fun main() {
     val conn  = Connector(TransaqConnector())
     conn.connect()
     val tradingApi: ViewTradingApi = conn.tradingApi()
-    //val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL")
+    //val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL", "SVCB")
 
     thread {
         runBlocking {
             val volumeIndicators = VolumeIndicators(tradingApi)
             println("Run indicators:")
-            val printSignals = moexWatchList.mapNotNull {
-                val indicator = volumeIndicators.isBigVolumeOnStartSession(Ticker(it, Exchanges.MOEX), Timeframe.MIN15)
-                if (indicator.isSignal) {
-                    "Ticker: $it, volume change: ${indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}%, " +
-                            "price change: ${indicator.priceChangePercentageInCandle?.toStringWithSign()}%"
-                } else {
-                    null
+            val startTime = System.currentTimeMillis()
+            val executorService = Executors.newFixedThreadPool(5)
+
+            val printSignals = mutableListOf<TickerWithIndicator>()
+            moexWatchList.forEach { t ->
+                executorService.submit {
+                    runBlocking {
+                        println("начата обработка $t")
+                        val tickers = tradingApi.getAllTickers()
+                            .filter { it.ticker.symbol == t && it.ticker.exchange == Exchanges.MOEX }
+                        if (tickers.isEmpty()) {
+                            println("can not find ticker: $t")
+                            return@runBlocking
+                        }
+                        if (tickers.size > 1) {
+                            println("find more than one tickers: $t, found: $tickers")
+                            return@runBlocking
+                        }
+                        val ticker = tickers.first()
+                        val candles = tradingApi.getLastCandles(
+                            ticker.ticker,
+                            Timeframe.MIN15,
+                            getCandlesCount(Timeframe.MIN15),
+                            Session.CURRENT_AND_PREVIOUS
+                        )
+                        val indicator = volumeIndicators.isBigVolumeOnStartSession(candles)
+                        if (indicator.isSignal) printSignals.add(TickerWithIndicator(ticker, indicator))
+                    }
                 }
             }
 
+            executorService.shutdown()
+            val finished = executorService.awaitTermination(3, TimeUnit.MINUTES)
+            if (finished) {
+                println("All tasks finished successfully.")
+            } else {
+                println("Timeout reached before all tasks completed.")
+            }
+
+//            val printSignals = moexWatchList.mapNotNull {
+//                val indicator = volumeIndicators.isBigVolumeOnStartSession(Ticker(it, Exchanges.MOEX), Timeframe.MIN15)
+//                if (indicator.isSignal) {
+//                    "Ticker: $it, volume change: ${indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}%, " +
+//                            "price change: ${indicator.priceChangePercentageInCandle?.toStringWithSign()}%"
+//                } else {
+//                    null
+//                }
+//            }
+//            println("Volume signals at 10:15, 15min bar: ")
+//            printSignals.forEach {
+//                println(it)
+//            }
+
+
             println("Volume signals at 10:15, 15min bar: ")
             printSignals.forEach {
-                println(it)
+                println("${it.ticker.shortDescription}(${it.ticker.ticker.symbol}) " +
+                        "volume: ${it.indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}%, " +
+                         "price: ${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%")
             }
+            println("Время работы загрузки свечей: " + ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек" )
 
         }
     }

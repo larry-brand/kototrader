@@ -82,7 +82,7 @@ class TransaqTradingService(val memory: TransaqMemory): TradingApi {
         val takeSize = if (candles.size >= candlesCount) {
             candles.size
         } else {
-            logger.warn { "Can not load candles with requested size, probably invalid size" }
+            logger.warn { "Can not load candles with requested size, downloaded size: ${candles.size} , ticker: $ticker" }
             candlesCount
         }
         when (session) {
