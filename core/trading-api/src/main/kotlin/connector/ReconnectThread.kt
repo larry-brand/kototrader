@@ -1,6 +1,7 @@
 package org.cryptolosers.trading.connector
 
 import mu.KotlinLogging
+import org.cryptolosers.commons.printFail
 
 class ReconnectThread(val connector: TerminalConnector) : Runnable {
 
@@ -35,7 +36,7 @@ class ReconnectThread(val connector: TerminalConnector) : Runnable {
                 Thread.sleep(5000)
                 //logger.debug { "try reconnect again, 5 sec" }
             } catch (e: InterruptedException) {
-                logger.error { "Connection thread interrupted, exit " }
+                logger.printFail { "Connection thread interrupted, exit " }
                 return
             }
         }
