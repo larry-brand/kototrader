@@ -97,6 +97,7 @@ data class TransaqCandles(
         } catch (e: InterruptedException) {
             logger.error(e) { "Candles was interrupted" }
         }
+        lock.unlock()
         return candles
     }
 

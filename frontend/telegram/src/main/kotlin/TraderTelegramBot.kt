@@ -1,9 +1,14 @@
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
+import org.cryptolosers.commons.toStringWithSign
+import org.cryptolosers.indicators.TickerWithIndicator
 import org.cryptolosers.indicators.VolumeIndicators
+import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.Exchanges
-import org.cryptolosers.trading.model.Ticker
+import org.cryptolosers.trading.model.Session
 import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
@@ -14,7 +19,12 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 
@@ -66,6 +76,8 @@ class TraderTelegramBot() : TelegramLongPollingBot() {
     }
 }
 
+val logger = KotlinLogging.logger {}
+
 fun main() {
     val bot = TraderTelegramBot()
     thread {
@@ -80,35 +92,101 @@ fun main() {
     val conn  = Connector(TransaqConnector())
     conn.connect()
     val tradingApi: ViewTradingApi = conn.tradingApi()
-    val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL")
+    val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL", "SVCB")
     val favorites = listOf("SBER")
+
     thread {
         runBlocking {
-            val volumeIndicators = VolumeIndicators(tradingApi)
-            println("Run indicators:")
-            val printSignals = moexWatchList.mapNotNull {
-                val indicator = volumeIndicators.isBigVolumeOnStartSession(Ticker(it, Exchanges.MOEX), Timeframe.MIN15)
-                if (indicator.isSignal) {
-                    val tickerInfo = tradingApi.getAllTickers().firstOrNull { t -> t.ticker == Ticker(it, Exchanges.MOEX) }
-                    "${tickerInfo?.shortDescription}($it)  v: ${indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}% " +
-                            "p: ${indicator.priceChangePercentageInCandle?.toStringWithSign()}%"
-                } else {
-                    null
-                }
-            }
+            while (true) {
+                val volumeIndicators = VolumeIndicators(tradingApi)
+                logger.info { "\nЗапуск индикаторов:" }
+                val startTime = System.currentTimeMillis()
+                val executorService = Executors.newFixedThreadPool(5)
 
-            if (printSignals.isNotEmpty()) {
-                val messageText = "Повышенные объемы на открытии на M15 в 10:15:" + "\n" + printSignals.joinToString(separator = "\n")
-                println(messageText)
+                val printSignals = Collections.synchronizedList(ArrayList<TickerWithIndicator>())
+                moexWatchList.forEach { t ->
+                    executorService.submit {
+                        runBlocking {
+                            val tickers = tradingApi.getAllTickers()
+                                .filter { it.ticker.symbol == t && it.ticker.exchange == Exchanges.MOEX }
+                            if (tickers.isEmpty()) {
+                                logger.warn { "can not find ticker: $t" }
+                                return@runBlocking
+                            }
+                            if (tickers.size > 1) {
+                                logger.warn {"find more than one tickers: $t, found: $tickers" }
+                                return@runBlocking
+                            }
+                            val ticker = tickers.first()
+                            val candles = tradingApi.getLastCandles(
+                                ticker.ticker,
+                                Timeframe.MIN15,
+                                getCandlesCount(Timeframe.MIN15),
+                                Session.CURRENT_AND_PREVIOUS
+                            )
+                            val indicator = volumeIndicators.isBigVolumeOnStartSession(candles)
+                            if (indicator.isSignal) printSignals.add(TickerWithIndicator(ticker, indicator))
+                        }
+                    }
+                }
+
+                executorService.shutdown()
+                val finished = executorService.awaitTermination(3, TimeUnit.MINUTES)
+                if (finished) {
+                    logger.info { "All tasks finished successfully." }
+                } else {
+                    logger.error { "Timeout reached before all tasks completed." }
+                }
+
+                val printSignalsString = printSignals.joinToString(separator = "\n") {
+                    ("#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
+                            "Об. x${it.indicator.volumeChangeFromMedianXInCandle} " +
+                            "Ц. ${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%")
+                }
+                logger.info { "Время работы загрузки свечей: " + ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек" }
+
+                val messageText = "⚠️ Повышенные объемы на открытии на M15 в 10:15:\n$printSignalsString"
+                logger.info { messageText }
                 bot.chatIds.forEach { id ->
                     val message = SendMessage()
                     message.chatId = id
                     message.text = messageText
-                    bot.execute(message) // отправка сообщения
+                    message.parseMode = "Markdown"
+                    bot.execute(message)
                 }
+
+                delay(5000)
             }
         }
     }
+
+//    thread {
+//        runBlocking {
+//            val volumeIndicators = VolumeIndicators(tradingApi)
+//            println("Run indicators:")
+//            val printSignals = moexWatchList.mapNotNull {
+//                val indicator = volumeIndicators.isBigVolumeOnStartSession(Ticker(it, Exchanges.MOEX), Timeframe.MIN15)
+//                if (indicator.isSignal) {
+//                    val tickerInfo = tradingApi.getAllTickers().firstOrNull { t -> t.ticker == Ticker(it, Exchanges.MOEX) }
+//                    "${tickerInfo?.shortDescription}($it)  v: ${indicator.volumeChangeFromMedianPercentageInCandle?.toStringWithSign()}% " +
+//                            "p: ${indicator.priceChangePercentageInCandle?.toStringWithSign()}%"
+//                } else {
+//                    null
+//                }
+//            }
+//
+//            if (printSignals.isNotEmpty()) {
+//                val messageText = "Повышенные объемы на открытии на M15 в 10:15:" + "\n" + printSignals.joinToString(separator = "\n")
+//                println(messageText)
+//                bot.chatIds.forEach { id ->
+//                    val message = SendMessage()
+//                    message.chatId = id
+//                    message.text = messageText
+//                    bot.execute(message) // отправка сообщения
+//                }
+//            }
+//        }
+//    }
 
 
 }
