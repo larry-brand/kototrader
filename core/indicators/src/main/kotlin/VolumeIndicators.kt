@@ -66,7 +66,7 @@ class VolumeIndicators(val tradingApi: ViewTradingApi) {
     }
 
     suspend fun isBigVolume(candles: List<Candle>): IndicatorResult {
-        val now = LocalDate.now().minusDays(1)
+        //val now = LocalDate.now().minusDays(1)
         if (candles.size <= 10) {
             return IndicatorResult(
                 isSignal = false,
@@ -83,21 +83,26 @@ class VolumeIndicators(val tradingApi: ViewTradingApi) {
             )
         }
         val medianVolume = findMedian(candles.map { it.volume })
-        if (candles.none { it.timestamp.toLocalDate() == now}) {
-            return IndicatorResult(
-                isSignal = false,
-                volumeChangeFromMedianXInCandle = null,
-                priceChangePercentageInCandle = null
-            )
-        }
+//        if (candles.none { it.timestamp.toLocalDate() == now}) {
+//            return IndicatorResult(
+//                isSignal = false,
+//                volumeChangeFromMedianXInCandle = null,
+//                priceChangePercentageInCandle = null
+//            )
+//        }
 
-        val lastCandle = candles.last { it.timestamp.toLocalDate() == now}
-        var prevCandleIndex = if (candles.indexOf(lastCandle) != 0) (candles.indexOf(lastCandle) - 1) else 0
-        var prevCandle: Candle
-        do {
-            prevCandle = candles[prevCandleIndex]
-            prevCandleIndex--
-        } while (prevCandleIndex >= 0)
+//        val lastCandle = candles.last { it.timestamp.toLocalDate() == now}
+//        val wrongLastCandle = candles.last { it.timestamp.toLocalDate() == now}
+        val lastCandle = candles.last()
+//        val lastCandleIndex = if (candles.indexOf(wrongLastCandle) != 0) (candles.indexOf(wrongLastCandle) - 1) else 0
+//        val lastCandle = candles[lastCandleIndex]
+        val prevCandleIndex = if (candles.indexOf(lastCandle) != 0) (candles.indexOf(lastCandle) - 1) else 0
+        val prevCandle = candles[prevCandleIndex]
+//        var prevCandle: Candle
+//        do {
+//            prevCandle = candles[prevCandleIndex]
+//            prevCandleIndex--
+//        } while (prevCandleIndex >= 0)
 
         val isSignal =  lastCandle.volume > bigVolume * medianVolume
 
@@ -111,7 +116,8 @@ class VolumeIndicators(val tradingApi: ViewTradingApi) {
         return IndicatorResult(
             isSignal = isSignal,
             volumeChangeFromMedianXInCandle = volumeChangeFromMedianXInCandle,
-            priceChangePercentageInCandle = priceChangePercentageInCandle
+            priceChangePercentageInCandle = priceChangePercentageInCandle,
+            details = "lastCandle: $lastCandle , prevCandle: $prevCandle"
         )
     }
 
@@ -140,6 +146,7 @@ data class IndicatorResult(
     val volumeChangeFromMedianXInCandle: BigDecimal?,
     val priceChangePercentageInCandle: BigDecimal?,
     //val priceChangePercentageInDay: Double
+    val details: String = ""
 )
 
 data class TickerWithIndicator (

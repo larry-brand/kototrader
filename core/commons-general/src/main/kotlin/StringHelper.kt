@@ -10,3 +10,7 @@ fun BigDecimal.toStringWithSign(): String {
         "+" + toString()
     }
 }
+
+fun Long.toStringWith_(): String {
+    return "%,d".format(this).replace(",", "_")
+}

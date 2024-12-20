@@ -1,6 +1,6 @@
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
+import org.cryptolosers.commons.moexLiquidTickers
 import org.cryptolosers.commons.toStringWithSign
 import org.cryptolosers.indicators.TickerWithIndicator
 import org.cryptolosers.indicators.VolumeIndicators
@@ -21,7 +21,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -84,7 +83,8 @@ class TraderTelegramBot() : TelegramLongPollingBot() {
 val logger = KotlinLogging.logger {}
 
 fun main() {
-    val forceRun = true
+    val immediateRun = false
+    val forceNotCheckLastCandle = false
     val bot = TraderTelegramBot()
     thread {
         try {
@@ -95,13 +95,18 @@ fun main() {
         }
     }
 
-    val conn  = Connector(TransaqConnector())
-    conn.connect()
-    val tradingApi: ViewTradingApi = conn.tradingApi()
-    val moexWatchList = listOf("ROSN", "SBER", "LKOH", "GAZP", "NVTK", "LNZL", "SVCB")
-    val favorites = listOf("SBER")
-
     thread {
+        val conn  = Connector(TransaqConnector())
+        conn.connect()
+        val tradingApi: ViewTradingApi = conn.tradingApi()
+
+        val favoriteTickers = runBlocking {
+            listOf("RIZ4","SiZ4", "SBER", "SVCB", "BSPB", "BSPBP ").map { f ->
+                tradingApi.getAllTickers().first { it.ticker.symbol == f && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }.ticker
+            }
+        }
+
+
         val scheduler = Executors.newScheduledThreadPool(1)
 
         val task = Runnable {
@@ -111,7 +116,7 @@ fun main() {
             val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
 
             // Проверяем, что текущее время находится в пределах с 10:00 до 24:00 и это будний день
-            if (!(currentHour in 10..24 && currentDay >= Calendar.MONDAY && currentDay <= Calendar.FRIDAY) && !forceRun) {
+            if (!(currentHour in 10..24 && currentDay >= Calendar.MONDAY && currentDay <= Calendar.FRIDAY) && !immediateRun) {
                 logger.info { "Задача пропущена: не будний день или не в рабочие часы." }
                 return@Runnable
             }
@@ -121,12 +126,12 @@ fun main() {
             val startTime = System.currentTimeMillis()
             val executorService = Executors.newFixedThreadPool(5)
 
-            val printSignals = Collections.synchronizedList(ArrayList<TickerWithIndicator>())
-            moexWatchList.forEach { t ->
+            var printSignalsNotFavorites = Collections.synchronizedList(ArrayList<TickerWithIndicator>())
+            moexLiquidTickers.forEach { t ->
                 executorService.submit {
                     runBlocking {
                         val tickers = tradingApi.getAllTickers()
-                            .filter { it.ticker.symbol == t && it.ticker.exchange == Exchanges.MOEX }
+                            .filter { it.ticker.symbol == t && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }
                         if (tickers.isEmpty()) {
                             logger.warn { "can not find ticker: $t" }
                             return@runBlocking
@@ -136,18 +141,26 @@ fun main() {
                             return@runBlocking
                         }
                         val ticker = tickers.first()
-                        val candles = tradingApi.getLastCandles(
+                        var candles = tradingApi.getLastCandles(
                             ticker.ticker,
                             Timeframe.MIN15,
                             getCandlesCount(Timeframe.MIN15),
                             Session.CURRENT_AND_PREVIOUS
                         )
-                        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() > 17 && !forceRun ) {
+
+                        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= 3 + 15 && !forceNotCheckLastCandle) {
                             logger.info { "Индикатор пропущен, последняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $t" }
                             return@runBlocking
                         }
+                        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() < 15 && !forceNotCheckLastCandle) {
+                            candles = candles.dropLast(1)
+                        }
+                        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= 3 + 15*2 && !forceNotCheckLastCandle) {
+                            logger.info { "Индикатор пропущен, предпоследняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $t" }
+                            return@runBlocking
+                        }
                         val indicator = volumeIndicators.isBigVolume(candles)
-                        if (indicator.isSignal) printSignals.add(TickerWithIndicator(ticker, indicator))
+                        if (indicator.isSignal) printSignalsNotFavorites.add(TickerWithIndicator(ticker, indicator))
                     }
                 }
             }
@@ -160,19 +173,43 @@ fun main() {
                 logger.error { "Timeout reached before all tasks completed." }
             }
 
-            val printSignalsString = printSignals.joinToString(separator = "\n") {
+            val printSignalFavorites = printSignalsNotFavorites.filter { favoriteTickers.contains(it.ticker.ticker) }
+
+            var printSignalsFiltered = (printSignalsNotFavorites.filter { it.indicator.volumeChangeFromMedianXInCandle!! >= BigDecimal(7) && it.indicator.priceChangePercentageInCandle!!.abs() >= BigDecimal(1)} +
+                    printSignalsNotFavorites.filter { it.indicator.volumeChangeFromMedianXInCandle!! >= BigDecimal(7) }.sortedByDescending { it.indicator.volumeChangeFromMedianXInCandle } +
+                    printSignalsNotFavorites.sortedByDescending { it.indicator.volumeChangeFromMedianXInCandle }).toMutableList()
+            printSignalsFiltered.removeIf { printSignalFavorites.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
+            val psSize = if (printSignalsFiltered.size >= 5) 5 else printSignalsFiltered.size
+            printSignalsNotFavorites = printSignalsFiltered.distinct().take(psSize)
+
+            val printFavoriteString = printSignalFavorites.joinToString(separator = "\n") {
+            val vBold = if (it.indicator.volumeChangeFromMedianXInCandle!! > BigDecimal(5)) "*" else ""
+            val pBold = if (it.indicator.priceChangePercentageInCandle!! > BigDecimal(1)) "*" else ""
+            ("★ #${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
+                    "Об. ${vBold}x${it.indicator.volumeChangeFromMedianXInCandle}${vBold} " +
+                    "Ц. ${pBold}${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%${pBold}")
+        }
+
+            val printSignalsString = printSignalsNotFavorites.joinToString(separator = "\n") {
+                val vBold = if (it.indicator.volumeChangeFromMedianXInCandle!! > BigDecimal(5)) "*" else ""
+                val pBold = if (it.indicator.priceChangePercentageInCandle!! > BigDecimal(1)) "*" else ""
+                ("#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
+                        "Об. ${vBold}x${it.indicator.volumeChangeFromMedianXInCandle}${vBold} " +
+                        "Ц. ${pBold}${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%${pBold}")
+            }
+            val printSignalsDebugString = printSignalsNotFavorites.joinToString(separator = "\n") {
                 ("#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
                         "Об. x${it.indicator.volumeChangeFromMedianXInCandle} " +
-                        "Ц. ${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%")
+                        "Ц. ${it.indicator.priceChangePercentageInCandle?.toStringWithSign()} ${it.indicator.details}%")
             }
             logger.info {
                 "Время работы загрузки свечей: " + ((System.currentTimeMillis()
                     .toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек"
             }
 
-            if (printSignals.isNotEmpty()) {
-                val messageText = "⚠️ Повышенные объемы на M15 в $nowString:\n$printSignalsString"
-                logger.info { messageText }
+            if (printFavoriteString.isNotEmpty() || printSignalsNotFavorites.isNotEmpty()) {
+                val messageText = "⚠️ Повышенные объемы на M15 в $nowString:\n$printFavoriteString${if (printFavoriteString.isNotEmpty()) "\n---\n" else ""}$printSignalsString"
+                logger.info { "⚠️ Повышенные объемы на M15 в $nowString:\n$printFavoriteString${if (printFavoriteString.isNotEmpty()) "\n---\n" else ""}$printSignalsDebugString" }
                 bot.chatIds.forEach { id ->
                     val message = SendMessage()
                     message.chatId = id
@@ -188,21 +225,15 @@ fun main() {
         val currentTime = Calendar.getInstance()
         val minute = currentTime.get(Calendar.MINUTE)
         val second = currentTime.get(Calendar.SECOND)
-//        val delay = when {
-//            minute < 15 -> 15 - minute
-//            minute < 30 -> 30 - minute
-//            minute < 45 -> 45 - minute
-//            else -> 60 - minute
-//        }
-
-//        val delay = when {
-//            minute < 15 -> (15 - minute) * 60 + (10 - second) // до 15 минут
-//            minute < 30 -> (30 - minute) * 60 + (10 - second) // до 30 минут
-//            minute < 45 -> (45 - minute) * 60 + (10 - second) // до 45 минут
-//            else -> (60 - minute) * 60 + (10 - second) // до следующего часа
-//        }
-
-        val delay = 0
+        var delay = when {
+            minute < 15 -> (15 - minute) * 60 + (10 - second) // до 15 минут
+            minute < 30 -> (30 - minute) * 60 + (10 - second) // до 30 минут
+            minute < 45 -> (45 - minute) * 60 + (10 - second) // до 45 минут
+            else -> (60 - minute) * 60 + (10 - second) // до следующего часа
+        }
+        if (immediateRun) {
+            delay = 0
+        }
         scheduler.scheduleAtFixedRate(task, delay.toLong(), 15*60, TimeUnit.SECONDS)
     }
 

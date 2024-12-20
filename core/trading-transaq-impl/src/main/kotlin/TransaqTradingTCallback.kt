@@ -86,7 +86,7 @@ class TransaqTradingTCallback(val memory: TransaqMemory) : TCallback {
                 // инструмента между сессиями является Seccode+Market
                 val marketName = memory.markets[s.market!!.toLong()]!!.market!!
                 val key = Ticker(symbol = s.seccode, exchange = marketName)
-                val info = TickerInfo(ticker = key, shortDescription = s.shortname!!, type = s.sectype!!)
+                val info = TickerInfo(ticker = key, shortDescription = s.shortname!!, type = s.sectype!!, lotSize = s.lotsize!!)
 
                 val transaqInfo = TransaqTickerInfo(
                     tickerInfo = info,

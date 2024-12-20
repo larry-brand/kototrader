@@ -8,6 +8,7 @@ data class TickerInfo (
     val shortDescription: String,
     val type: InstrumentType,
 //    val currency: Currency
+    val lotSize: Long
 )
 
 typealias SymbolName = String
