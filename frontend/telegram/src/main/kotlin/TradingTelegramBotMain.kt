@@ -21,7 +21,7 @@ val forceNotCheckLastCandle = true
 val showNotFavoriteTickersSize = 5
 val volumeXMedianFavoriteTickers = BigDecimal(2)
 val volumeXMedianNotFavoriteTickers = BigDecimal(5)
-val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "ETLN")
+val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP")
 
 fun main() {
     val logger = KotlinLogging.logger {}

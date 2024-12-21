@@ -33,6 +33,10 @@ class TradingTelegramBot() : TelegramLongPollingBot() {
             val chatId = message.chatId.toString()
             val text = message.text
 
+            if (!chatIds.contains(chatId)) {
+                logger.info { "Новый пользователь написал боту, username: ${message.from.userName}, " +
+                        "имя: ${message.from.firstName} ${message.from.lastName}, chatId: ${chatId}" }
+            }
             chatIds.add(chatId)
             // Ответ на сообщение
             val responseMessage = when {

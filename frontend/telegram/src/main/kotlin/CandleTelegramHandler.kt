@@ -58,6 +58,8 @@ class CandleTelegramHandler(
 
         if (favoriteAlerts.isNotEmpty() || notFavoriteAlerts.isNotEmpty()) {
             sendAlerts(favoriteAlerts, notFavoriteAlerts, nowString)
+        } else {
+            logger.info { "Не найдено повышенных объемов на ${timeframe.toText()} в $nowString" }
         }
     }
 
