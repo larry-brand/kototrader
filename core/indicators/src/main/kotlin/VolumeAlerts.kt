@@ -13,14 +13,10 @@ class VolumeAlerts() {
     private val logger = KotlinLogging.logger {}
 
     companion object {
-        val days = 22 * 2 // days for calculate volume
+        val days = 2 // days for calculate volume
     }
 
-    suspend fun isBigVolume(candles: List<Candle>): BigVolumeAlertResult? {
-        if (candles.size <= 10) {
-            logger.warn { "Слишком мало свечек: ${candles.size}" }
-            return null
-        }
+    suspend fun isBigVolume(candles: List<Candle>): BigVolumeAlertResult {
         val medianVolume = findMedian(candles.map { it.volume })
 
         val lastCandle = candles.last()
@@ -127,8 +123,8 @@ data class BigVolumeAlertResult(
     val volumeX: BigDecimal,
     val pricePercentage: BigDecimal,
     //val pricePercentageInDay: BigDecimal,
-    val lastCandleVolume: Long,
-    val medianVolume: Long,
+    internal val lastCandleVolume: Long,
+    internal val medianVolume: Long,
     val details: String = ""
 )
 

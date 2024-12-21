@@ -9,10 +9,7 @@ import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.indicators.isAlert
 import org.cryptolosers.trading.ViewTradingApi
-import org.cryptolosers.trading.model.Exchanges
-import org.cryptolosers.trading.model.Session
-import org.cryptolosers.trading.model.Ticker
-import org.cryptolosers.trading.model.Timeframe
+import org.cryptolosers.trading.model.*
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import java.lang.Exception
 import java.math.BigDecimal
@@ -42,14 +39,14 @@ class CandleTelegramHandler(
             return
         }
 
-        logger.info { "\nЗапуск оповещения:" }
+        logger.info { "\nЗапуск создания оповещений:" }
         val startTime = System.currentTimeMillis()
         val executorService = Executors.newFixedThreadPool(5)
         val allAlerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
 
         makeAlerts(moexLiquidTickers, executorService, allAlerts)
 
-        if (!checkProsessingAlertsFinished(executorService)) {
+        if (!checkMakingAlertsFinished(executorService)) {
             return
         }
 
@@ -81,39 +78,29 @@ class CandleTelegramHandler(
         tickers.forEach { t ->
             executorService.submit {
                 runBlocking {
-                    val foundTickers = tradingApi.getAllTickers()
+                    val similarTickers = tradingApi.getAllTickers()
                         .filter { it.ticker.symbol == t && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }
-                    if (foundTickers.isEmpty()) {
+                    if (similarTickers.isEmpty()) {
                         logger.warn { "Не найден тикер: $t" }
                         return@runBlocking
                     }
-                    if (foundTickers.size > 1) {
-                        logger.warn { "Найдено больше, чем один тикер: $t, найдено: $foundTickers" }
+                    if (similarTickers.size > 1) {
+                        logger.warn { "Найдено больше, чем один тикер: $t, найдено: $similarTickers" }
                         return@runBlocking
                     }
-                    val ticker = foundTickers.first()
-                    var candles = tradingApi.getLastCandles(
+                    val ticker = similarTickers.first()
+                    val candles = tradingApi.getLastCandles(
                         ticker.ticker,
                         timeframe,
                         getCandlesCount(ticker.ticker, timeframe),
                         Session.CURRENT_AND_PREVIOUS
                     )
+                    if (!checkCandles(candles, ticker.ticker)) {
+                        return@runBlocking
+                    }
 
-                    if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= timeframe.toMin()/2 + timeframe.toMin() && !forceNotCheckLastCandle) {
-                        logger.info { "Индикатор пропущен, последняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $t" }
-                        return@runBlocking
-                    }
-                    if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() < timeframe.toMin() && !forceNotCheckLastCandle) {
-                        candles = candles.dropLast(1)
-                    }
-                    if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= timeframe.toMin()/2 + timeframe.toMin()*2 && !forceNotCheckLastCandle) {
-                        logger.info { "Индикатор пропущен, предпоследняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $t" }
-                        return@runBlocking
-                    }
                     val alert = volumeAlerts.isBigVolume(candles)
-                    if (alert != null) {
-                        allAlerts.add(TickerWithAlert(ticker, alert))
-                    }
+                    allAlerts.add(TickerWithAlert(ticker, alert))
                 }
             }
         }
@@ -137,7 +124,7 @@ class CandleTelegramHandler(
         }
     }
 
-    private fun checkProsessingAlertsFinished(executorService: ExecutorService): Boolean {
+    private fun checkMakingAlertsFinished(executorService: ExecutorService): Boolean {
         executorService.shutdown()
         val finished = executorService.awaitTermination(3, TimeUnit.MINUTES)
         if (finished) {
@@ -149,6 +136,26 @@ class CandleTelegramHandler(
         }
     }
 
+    private fun checkCandles(candlesRequest: List<Candle>, ticker: Ticker): Boolean {
+        var candles = candlesRequest
+        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= timeframe.toMin()/2 + timeframe.toMin() && !forceNotCheckLastCandle) {
+            logger.info { "Индикатор пропущен, последняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $ticker" }
+            return false
+        }
+        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() < timeframe.toMin() && !forceNotCheckLastCandle) {
+            candles = candles.dropLast(1)
+        }
+        if (candles.isNotEmpty() && Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes() >= timeframe.toMin()/2 + timeframe.toMin()*2 && !forceNotCheckLastCandle) {
+            logger.info { "Индикатор пропущен, предпоследняя свечка слишком старая, разница во времени ${Duration.between(candles.last().timestamp, LocalDateTime.now()).toMinutes()} минут, тикер $ticker" }
+            return false
+        }
+        if (candles.size <= 20) {
+            logger.info { "Слишком мало свечек: ${candles.size}, тикер ${ticker}" }
+            return false
+        }
+        return true
+    }
+
     private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
         val favoriteTickersOrderIndex = favoriteTickers.withIndex().associate { it.value to it.index }
         return allAlerts.filter { favoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
@@ -157,11 +164,11 @@ class CandleTelegramHandler(
     private fun getNotFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
         val notFavoriteAlerts = allAlerts.filter { it.alert.isAlert(volumeXMedian) }.toMutableList()
         notFavoriteAlerts.removeIf { favoriteAlerts.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
-        notFavoriteAlerts.sortBy {
-            if (it.alert.volumeX!! >= BigDecimal(7) && it.alert.pricePercentage!!.abs() >= BigDecimal(1)) {
-                it.alert.volumeX!! * it.alert.pricePercentage!!
+        notFavoriteAlerts.sortedByDescending {
+            if (it.alert.volumeX >= BigDecimal(7) && it.alert.pricePercentage.abs() >= BigDecimal(1)) {
+                it.alert.volumeX * it.alert.pricePercentage
             } else {
-                it.alert.volumeX!!
+                it.alert.volumeX
             }
         }
         return notFavoriteAlerts.take(showNotFavoriteTickersSize)
