@@ -1,11 +1,15 @@
 package org.cryptolosers.commons
 
-val forst = """RIZ4
-SiZ4""".split("\n")
+import java.time.LocalDate
+
+val fortsMap = linkedMapOf(
+    "RIH5" to LocalDate.parse("2024-12-19"),
+    "SiH5" to LocalDate.parse("2024-12-19"),
+)
 
 val lowLiquidFavorite = """MTLRP""".split("\n")
 
-val moexLiquidTickers = (forst + """T
+val moexLiquidTickers = (fortsMap.keys + """T
 SBER
 GAZP
 LKOH
@@ -105,7 +109,7 @@ DELI
 ROLO
 AKRN""".split("\n") + lowLiquidFavorite).distinct()
 
-val moexAllTickers = forst + """SBER
+val moexAllTickers = fortsMap.values + """SBER
 SBERP
 ROSN
 LKOH

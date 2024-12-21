@@ -1,7 +1,7 @@
 package org.cryptolosers.trading.model
 
 /** ticker=BR exchangeId="MOEX"  internalId=34 */
-data class Ticker(val symbol: SymbolName, val exchange: ExchangeName? = null)
+data class Ticker(val symbol: SymbolName, val exchange: Exchange? = null)
 
 data class TickerInfo (
     val ticker: Ticker,
@@ -12,13 +12,13 @@ data class TickerInfo (
 )
 
 typealias SymbolName = String
-typealias ExchangeName = String
+typealias Exchange = String
 
 object Exchanges {
-    val MOEX: ExchangeName = "ММВБ"
-    val MOEX_FORTS: ExchangeName = "FORTS"
-    val NASDAQ: ExchangeName = "NASDAQ"
-    val NYSE: ExchangeName = "NYSE"
+    val MOEX: Exchange = "ММВБ"
+    val MOEX_FORTS: Exchange = "FORTS"
+    val NASDAQ: Exchange = "NASDAQ"
+    val NYSE: Exchange = "NYSE"
 }
 
 typealias InstrumentType = String

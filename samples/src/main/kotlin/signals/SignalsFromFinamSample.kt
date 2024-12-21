@@ -3,8 +3,8 @@ package org.cryptolosers.samples.signals
 import kotlinx.coroutines.*
 import mu.KotlinLogging
 import org.cryptolosers.commons.toStringWithSign
-import org.cryptolosers.indicators.TickerWithIndicator
-import org.cryptolosers.indicators.VolumeIndicators
+import org.cryptolosers.indicators.TickerWithAlert
+import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
@@ -34,12 +34,12 @@ suspend fun main() {
     thread {
         runBlocking {
             while (true) {
-                val volumeIndicators = VolumeIndicators(tradingApi)
+                val volumeAlerts = VolumeAlerts(tradingApi)
                 logger.info { "\nЗапуск индикаторов:" }
                 val startTime = System.currentTimeMillis()
                 val executorService = Executors.newFixedThreadPool(5)
 
-                val printSignals = Collections.synchronizedList(ArrayList<TickerWithIndicator>())
+                val printSignals = Collections.synchronizedList(ArrayList<TickerWithAlert>())
                 moexWatchList.forEach { t ->
                     executorService.submit {
                         runBlocking {
@@ -57,11 +57,11 @@ suspend fun main() {
                             val candles = tradingApi.getLastCandles(
                                 ticker.ticker,
                                 Timeframe.MIN15,
-                                getCandlesCount(Timeframe.MIN15),
+                                getCandlesCount(ticker.ticker, Timeframe.MIN15),
                                 Session.CURRENT_AND_PREVIOUS
                             )
-                            val indicator = volumeIndicators.isBigVolumeOnStartSession(candles)
-                            if (indicator.isSignal) printSignals.add(TickerWithIndicator(ticker, indicator))
+                            val indicator = volumeAlerts.isBigVolumeOnStartSession(candles)
+                            if (indicator.isSignal) printSignals.add(TickerWithAlert(ticker, indicator))
                         }
                     }
                 }
@@ -77,8 +77,8 @@ suspend fun main() {
                 logger.info { "Volume signals at 10:15, 15min bar: " }
                 printSignals.forEach {
                     println("${it.ticker.shortDescription}(${it.ticker.ticker.symbol}) " +
-                            "volume: ${it.indicator.volumeChangeFromMedianXInCandle?.toStringWithSign()}%, " +
-                             "price: ${it.indicator.priceChangePercentageInCandle?.toStringWithSign()}%")
+                            "volume: ${it.indicator.volumeX?.toStringWithSign()}%, " +
+                             "price: ${it.indicator.pricePercentage?.toStringWithSign()}%")
                 }
                 logger.info { "Время работы загрузки свечей: " + ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек" }
 
