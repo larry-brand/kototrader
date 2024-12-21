@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="TradingTelegramBot Insert Creds" type="JetRunConfigurationType">
+  <configuration default="false" name="TradingTelegramBot [Copy it and insert Creds]" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="org.cryptolosers.telegrambot.TradingTelegramBotMainKt" />
     <module name="koto-trader.frontend.telegram.main" />
     <shortenClasspath name="NONE" />

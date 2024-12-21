@@ -9,6 +9,8 @@ val fortsMap = linkedMapOf(
 
 val lowLiquidFavorite = """MTLRP""".split("\n")
 
+val cryptoTickers = listOf("BTCUSDT", "TONUSDT")
+
 val moexLiquidTickers = (fortsMap.keys + """T
 SBER
 GAZP

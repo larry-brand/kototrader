@@ -4,6 +4,7 @@ dependencies {
     implementation(project(":core:trading-api"))
     implementation(project(":core:simulator"))
     implementation(project(":core:trading-transaq-impl"))
+    implementation(project(":core:trading-bybit-impl"))
     implementation(project(":core:indicators"))
 
     implementation("org.slf4j:slf4j-api:${properties["slf4j_version"]}")

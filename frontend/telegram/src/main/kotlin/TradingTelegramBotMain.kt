@@ -1,6 +1,7 @@
 package org.cryptolosers.telegrambot
 
 import mu.KotlinLogging
+import org.cryptolosers.bybit.ByBitViewTradingApi
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.Timeframe
@@ -11,7 +12,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 import java.math.BigDecimal
 import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
@@ -19,7 +19,7 @@ val DEBUG = true
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 val showCountNotFavoriteTickers = 5
-val volumeXMedianFavoriteTickers = BigDecimal(2)
+val volumeXMedianFavoriteTickers = BigDecimal(0)
 val volumeXMedianNotFavoriteTickers = BigDecimal(5)
 val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP")
 
@@ -41,13 +41,14 @@ fun main() {
         val conn  = Connector(TransaqConnector())
         conn.connect()
         val tradingApi: ViewTradingApi = conn.tradingApi()
+        val cryptoTradingApi: ViewTradingApi = ByBitViewTradingApi()
 
         val scheduler = Executors.newScheduledThreadPool(1)
         val task = Runnable {
-            CandleTelegramHandler(bot, tradingApi, Timeframe.MIN15).run()
+            CandleTelegramHandler(bot, tradingApi, cryptoTradingApi, Timeframe.MIN15).run()
             val minute = Calendar.getInstance().get(Calendar.MINUTE)
             if (minute in 0..3) {
-                CandleTelegramHandler(bot, tradingApi, Timeframe.HOUR1).run()
+                CandleTelegramHandler(bot, tradingApi, cryptoTradingApi, Timeframe.HOUR1).run()
             }
         }
 

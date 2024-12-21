@@ -106,6 +106,7 @@ class HistoryFile : ProjectHomeFile {
         when (dayOfWeek) {
             DayOfWeek.SATURDAY -> return date.minus(1, ChronoUnit.DAYS)
             DayOfWeek.SUNDAY -> return date.minus(2, ChronoUnit.DAYS)
+            else -> {}
         }
         return date
     }

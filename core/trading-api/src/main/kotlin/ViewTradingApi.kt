@@ -13,7 +13,7 @@ interface ViewTradingApi {
     //TODO: add suspend fun unsubscribePriceChanges(ticker: Ticker)
     suspend fun getOrderBook(ticker: Ticker): OrderBook
     suspend fun getCandles(ticker: Ticker, timeframe: Timeframe, startTimestamp: LocalDateTime, endTimestamp: LocalDateTime): List<Candle>
-    suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session): List<Candle>
+    suspend fun getLastCandles(ticker: Ticker, timeframe: Timeframe, candlesCount: Int, session: Session = Session.CURRENT_AND_PREVIOUS): List<Candle>
 
 
 }

@@ -2,6 +2,7 @@ package org.cryptolosers.telegrambot
 
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
+import org.cryptolosers.commons.cryptoTickers
 import org.cryptolosers.commons.moexLiquidTickers
 import org.cryptolosers.commons.toStringWithSign
 import org.cryptolosers.indicators.TickerWithAlert
@@ -23,10 +24,12 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
+import kotlin.concurrent.thread
 
 class CandleTelegramHandler(
     private val bot: TradingTelegramBot,
     private val tradingApi: ViewTradingApi,
+    private val cryptoTradingApi: ViewTradingApi,
     private val timeframe: Timeframe
 ): Runnable {
     private val volumeAlerts = VolumeAlerts()
@@ -52,8 +55,12 @@ class CandleTelegramHandler(
             return
         }
 
+        val cryptoAllAlerts = runBlocking {
+            makeCryptoAlerts(cryptoTickers)
+        }
+
         val activeFavoriteTickers = getActiveFavoriteTickets()
-        val favoriteAlerts = getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers, activeFavoriteTickers)
+        val favoriteAlerts = cryptoAllAlerts + getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers, activeFavoriteTickers)
         val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts, volumeXMedianNotFavoriteTickers)
 
         logger.info { "Время работы загрузки свечей: " +
@@ -112,8 +119,7 @@ class CandleTelegramHandler(
                     val candles = tradingApi.getLastCandles(
                         ticker.ticker,
                         timeframe,
-                        getCandlesCount(ticker.ticker, timeframe),
-                        Session.CURRENT_AND_PREVIOUS
+                        getCandlesCount(ticker.ticker, timeframe)
                     )
                     if (!checkCandles(candles, ticker.ticker)) {
                         return@runBlocking
@@ -124,6 +130,31 @@ class CandleTelegramHandler(
                 }
             }
         }
+    }
+
+    private suspend fun makeCryptoAlerts(tickers: List<String>): MutableList<TickerWithAlert> {
+        val allAlerts = mutableListOf<TickerWithAlert>()
+        tickers.forEach { t ->
+            val similarTickers = cryptoTradingApi.getAllTickers()
+                .filter { it.ticker.symbol == t }
+            if (similarTickers.isEmpty()) {
+                logger.warn { "Не найден тикер: $t" }
+                return mutableListOf()
+            }
+            if (similarTickers.size > 1) {
+                logger.warn { "Найдено больше, чем один тикер: $t, найдено: $similarTickers" }
+                return mutableListOf()
+            }
+            val ticker = similarTickers.first()
+            val candles = cryptoTradingApi.getLastCandles(
+                ticker.ticker,
+                timeframe,
+                getCandlesCount(ticker.ticker, timeframe),
+            )
+            val alert = volumeAlerts.isBigVolume(candles)
+            allAlerts.add(TickerWithAlert(ticker, alert))
+        }
+        return allAlerts
     }
 
     private fun sendAlerts(favoriteAlerts: List<TickerWithAlert>, notFavoriteAlerts: List<TickerWithAlert>, nowString: String) {

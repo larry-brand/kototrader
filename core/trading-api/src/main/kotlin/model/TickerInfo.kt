@@ -19,6 +19,8 @@ object Exchanges {
     val MOEX_FORTS: Exchange = "FORTS"
     val NASDAQ: Exchange = "NASDAQ"
     val NYSE: Exchange = "NYSE"
+
+    val Bybit: Exchange = "Bybit"
 }
 
 typealias InstrumentType = String

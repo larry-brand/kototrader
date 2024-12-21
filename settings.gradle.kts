@@ -1,6 +1,7 @@
 include(":core:commons-general")
 include(":core:trading-api")
 include(":core:trading-transaq-impl")
+include(":core:trading-bybit-impl")
 include(":core:history-service")
 include(":core:simulator")
 include(":frontend:desktop")
