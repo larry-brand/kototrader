@@ -11,6 +11,7 @@ import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import java.math.RoundingMode
+import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -34,7 +35,7 @@ suspend fun main() {
     thread {
         runBlocking {
             while (true) {
-                val volumeAlerts = VolumeAlerts(tradingApi)
+                val volumeAlerts = VolumeAlerts()
                 logger.info { "\nЗапуск индикаторов:" }
                 val startTime = System.currentTimeMillis()
                 val executorService = Executors.newFixedThreadPool(5)
@@ -60,8 +61,10 @@ suspend fun main() {
                                 getCandlesCount(ticker.ticker, Timeframe.MIN15),
                                 Session.CURRENT_AND_PREVIOUS
                             )
-                            val indicator = volumeAlerts.isBigVolumeOnStartSession(candles)
-                            if (indicator.isSignal) printSignals.add(TickerWithAlert(ticker, indicator))
+                            val alert = volumeAlerts.isBigVolumeOnStartSession(candles, LocalDate.now())
+                            if (alert != null) {
+                                printSignals.add(TickerWithAlert(ticker, alert))
+                            }
                         }
                     }
                 }

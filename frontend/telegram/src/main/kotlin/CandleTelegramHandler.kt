@@ -1,4 +1,7 @@
+package org.cryptolosers.telegrambot
+
 import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
 import org.cryptolosers.commons.moexLiquidTickers
 import org.cryptolosers.commons.toStringWithSign
 import org.cryptolosers.indicators.TickerWithAlert
@@ -29,7 +32,8 @@ class CandleTelegramHandler(
     private val favoriteTickers: List<Ticker>,
     private val timeframe: Timeframe
 ): Runnable {
-    val volumeAlerts = VolumeAlerts(tradingApi)
+    private val volumeAlerts = VolumeAlerts()
+    private val logger = KotlinLogging.logger {}
 
     override fun run() {
         val nowString = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -44,7 +48,7 @@ class CandleTelegramHandler(
 
         makeAlerts(moexLiquidTickers, executorService, allAlerts)
 
-        if (!checkFinishedExecutorService(executorService)) {
+        if (!checkProsessingAlertsFinished(executorService)) {
             return
         }
 
@@ -106,7 +110,9 @@ class CandleTelegramHandler(
                         return@runBlocking
                     }
                     val alert = volumeAlerts.isBigVolume(candles)
-                    if (alert.isSignal) allAlerts.add(TickerWithAlert(ticker, alert))
+                    if (alert != null) {
+                        allAlerts.add(TickerWithAlert(ticker, alert))
+                    }
                 }
             }
         }
@@ -130,7 +136,7 @@ class CandleTelegramHandler(
         }
     }
 
-    private fun checkFinishedExecutorService(executorService: ExecutorService): Boolean {
+    private fun checkProsessingAlertsFinished(executorService: ExecutorService): Boolean {
         executorService.shutdown()
         val finished = executorService.awaitTermination(3, TimeUnit.MINUTES)
         if (finished) {

@@ -1,3 +1,5 @@
+package org.cryptolosers.telegrambot
+
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.cryptolosers.trading.ViewTradingApi
@@ -19,6 +21,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 class TraderTelegramBot() : TelegramLongPollingBot() {
+    private val logger = KotlinLogging.logger {}
 
     val chatIds = ConcurrentHashMap.newKeySet<String>()
     init {
@@ -66,12 +69,12 @@ class TraderTelegramBot() : TelegramLongPollingBot() {
     }
 }
 
-val logger = KotlinLogging.logger {}
 val immediateRun = true
 val forceNotCheckLastCandle = true
 val showNotFavoriteTickersSize = 5
 
 fun main() {
+    val logger = KotlinLogging.logger {}
 
     val bot = TraderTelegramBot()
     thread {
