@@ -13,7 +13,7 @@ class VolumeAlerts() {
     private val logger = KotlinLogging.logger {}
 
     companion object {
-        val days = 2 // days for calculate volume
+        val days = 2 * 22 // days for calculate volume
     }
 
     suspend fun isBigVolume(candles: List<Candle>): BigVolumeAlertResult {

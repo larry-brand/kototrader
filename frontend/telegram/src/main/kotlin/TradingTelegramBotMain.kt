@@ -45,7 +45,10 @@ fun main() {
         val scheduler = Executors.newScheduledThreadPool(1)
         val task = Runnable {
             CandleTelegramHandler(bot, tradingApi, Timeframe.MIN15).run()
-            CandleTelegramHandler(bot, tradingApi, Timeframe.HOUR1).run()
+            val minute = Calendar.getInstance().get(Calendar.MINUTE)
+            if (minute in 0..3) {
+                CandleTelegramHandler(bot, tradingApi, Timeframe.HOUR1).run()
+            }
         }
 
         val currentTime = Calendar.getInstance()
