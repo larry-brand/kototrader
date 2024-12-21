@@ -42,7 +42,7 @@ class VolumeAlerts() {
             return AlertResult(
                 volumeX = volumeX,
                 pricePercentage = pricePercentage,
-                details = "lastCandle: $lastCandle , prevCandle: $prevCandle, median: $medianVolume"
+                details = "lastCandle: $lastCandle , prevCandle: $prevCandle, median volume: $medianVolume"
             )
         } else {
             return null
@@ -88,7 +88,7 @@ class VolumeAlerts() {
             return AlertResult(
                 volumeX = volumeX,
                 pricePercentage = pricePercentage,
-                details = "startCurrentSessionCandle: $startCurrentSessionCandle, median: $medianVolume"
+                details = "startCurrentSessionCandle: $startCurrentSessionCandle, median volume: $medianVolume"
             )
         } else {
             return null

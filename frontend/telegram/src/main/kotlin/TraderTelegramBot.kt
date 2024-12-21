@@ -72,6 +72,7 @@ class TraderTelegramBot() : TelegramLongPollingBot() {
 val immediateRun = true
 val forceNotCheckLastCandle = true
 val showNotFavoriteTickersSize = 5
+val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "ETLN")
 
 fun main() {
     val logger = KotlinLogging.logger {}
@@ -92,7 +93,7 @@ fun main() {
         val tradingApi: ViewTradingApi = conn.tradingApi()
 
         val favoriteTickers = runBlocking {
-            listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "ETLN").map { f ->
+            favoriteTickers.map { f ->
                 tradingApi.getAllTickers().first { it.ticker.symbol == f && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }.ticker
             }
         }
