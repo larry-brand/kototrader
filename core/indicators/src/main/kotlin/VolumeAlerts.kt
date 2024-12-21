@@ -14,7 +14,6 @@ class VolumeAlerts() {
 
     companion object {
         val days = 22 * 2 // days for calculate volume
-        val bigVolume = 3 // big volume more median
     }
 
     suspend fun isBigVolume(candles: List<Candle>): AlertResult? {
@@ -28,73 +27,69 @@ class VolumeAlerts() {
         val prevCandleIndex = if (candles.indexOf(lastCandle) != 0) (candles.indexOf(lastCandle) - 1) else 0
         val prevCandle = candles[prevCandleIndex]
 
-        val isAlert =  lastCandle.volume > bigVolume * medianVolume
-
-        if (isAlert) {
-            val scale = 2
-            val volumeX = lastCandle.let {
-                ((it.volume.toDouble() / medianVolume.toDouble())).toBigDecimal().setScale(1, RoundingMode.HALF_DOWN)
-            }
-            val pricePercentage = lastCandle.let {
-                ((it.closePrice.toDouble() - prevCandle.closePrice.toDouble()) / prevCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(scale, RoundingMode.HALF_DOWN)
-            }
-
-            return AlertResult(
-                volumeX = volumeX,
-                pricePercentage = pricePercentage,
-                details = "lastCandle: $lastCandle , prevCandle: $prevCandle, median volume: $medianVolume"
-            )
-        } else {
-            return null
+        val scale = 2
+        val volumeX = lastCandle.let {
+            ((it.volume.toDouble() / medianVolume.toDouble())).toBigDecimal().setScale(1, RoundingMode.HALF_DOWN)
         }
+        val pricePercentage = lastCandle.let {
+            ((it.closePrice.toDouble() - prevCandle.closePrice.toDouble()) / prevCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(scale, RoundingMode.HALF_DOWN)
+        }
+
+        return AlertResult(
+            volumeX = volumeX,
+            pricePercentage = pricePercentage,
+            lastCandleVolume = lastCandle.volume,
+            medianVolume = medianVolume,
+            details = "lastCandle: $lastCandle , prevCandle: $prevCandle, median volume: $medianVolume"
+        )
 
     }
 
-    suspend fun isBigVolumeOnStartSession(candles: List<Candle>, now: LocalDate): AlertResult? {
-        if (candles.size <= 10) {
-            logger.warn { "Слишком мало свечек: ${candles.size}" }
-            return null
-        }
-        val startSessionCandles = candles.filter { it.timestamp.hour == 10 && it.timestamp.minute == 0 }
-        if (startSessionCandles.isEmpty()) {
-            logger.warn { "нет свечь начала дня" }
-            return null
-        }
-        val medianVolume = findMedian(startSessionCandles.map { it.volume })
-        val startCurrentSessionCandle = candles.firstOrNull { it.timestamp.hour == 10 && it.timestamp.minute == 0 && it.timestamp.toLocalDate() == now}
-        if (startCurrentSessionCandle == null) {
-            logger.warn { "нет свечи начала текущего дня" }
-            return null
-        }
-
-        var prevStartCurrentSessionCandleIndex = if (candles.indexOf(startCurrentSessionCandle) != 0) (candles.indexOf(startCurrentSessionCandle) - 1) else 0
-        var prevStartCurrentSessionCandle: Candle
-        do {
-            prevStartCurrentSessionCandle = candles[prevStartCurrentSessionCandleIndex]
-            prevStartCurrentSessionCandleIndex--
-        } while (prevStartCurrentSessionCandle.timestamp.toLocalDate().isEqual(now) && prevStartCurrentSessionCandleIndex >= 0)
-
-        val bigVolumes = startSessionCandles.filter { it.volume > bigVolume * medianVolume }
-        val isAlert = bigVolumes.contains(startCurrentSessionCandle)
-
-        if (isAlert) {
-            val scale = 2
-            val volumeX = startCurrentSessionCandle.let {
-                ((it.volume.toDouble() / medianVolume.toDouble())).toBigDecimal().setScale(1, RoundingMode.HALF_DOWN)
-            }
-            val pricePercentage = startCurrentSessionCandle.let {
-                ((it.closePrice.toDouble() - prevStartCurrentSessionCandle.closePrice.toDouble()) / prevStartCurrentSessionCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(scale, RoundingMode.HALF_DOWN)
-            }
-            return AlertResult(
-                volumeX = volumeX,
-                pricePercentage = pricePercentage,
-                details = "startCurrentSessionCandle: $startCurrentSessionCandle, median volume: $medianVolume"
-            )
-        } else {
-            return null
-        }
-
-    }
+//    suspend fun isBigVolumeOnStartSession(candles: List<Candle>, now: LocalDate): AlertResult? {
+//        if (candles.size <= 10) {
+//            logger.warn { "Слишком мало свечек: ${candles.size}" }
+//            return null
+//        }
+//        val startSessionCandles = candles.filter { it.timestamp.hour == 10 && it.timestamp.minute == 0 }
+//        if (startSessionCandles.isEmpty()) {
+//            logger.warn { "нет свечь начала дня" }
+//            return null
+//        }
+//        val medianVolume = findMedian(startSessionCandles.map { it.volume })
+//        val startCurrentSessionCandle = candles.firstOrNull { it.timestamp.hour == 10 && it.timestamp.minute == 0 && it.timestamp.toLocalDate() == now}
+//        if (startCurrentSessionCandle == null) {
+//            logger.warn { "нет свечи начала текущего дня" }
+//            return null
+//        }
+//
+//        var prevStartCurrentSessionCandleIndex = if (candles.indexOf(startCurrentSessionCandle) != 0) (candles.indexOf(startCurrentSessionCandle) - 1) else 0
+//        var prevStartCurrentSessionCandle: Candle
+//        do {
+//            prevStartCurrentSessionCandle = candles[prevStartCurrentSessionCandleIndex]
+//            prevStartCurrentSessionCandleIndex--
+//        } while (prevStartCurrentSessionCandle.timestamp.toLocalDate().isEqual(now) && prevStartCurrentSessionCandleIndex >= 0)
+//
+//        val bigVolumes = startSessionCandles.filter { it.volume > bigVolume * medianVolume }
+//        val isAlert = bigVolumes.contains(startCurrentSessionCandle)
+//
+//        if (isAlert) {
+//            val scale = 2
+//            val volumeX = startCurrentSessionCandle.let {
+//                ((it.volume.toDouble() / medianVolume.toDouble())).toBigDecimal().setScale(1, RoundingMode.HALF_DOWN)
+//            }
+//            val pricePercentage = startCurrentSessionCandle.let {
+//                ((it.closePrice.toDouble() - prevStartCurrentSessionCandle.closePrice.toDouble()) / prevStartCurrentSessionCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(scale, RoundingMode.HALF_DOWN)
+//            }
+//            return AlertResult(
+//                volumeX = volumeX,
+//                pricePercentage = pricePercentage,
+//                details = "startCurrentSessionCandle: $startCurrentSessionCandle, median volume: $medianVolume"
+//            )
+//        } else {
+//            return null
+//        }
+//
+//    }
 
 
 
@@ -133,12 +128,18 @@ data class AlertResult(
     val volumeX: BigDecimal,
     val pricePercentage: BigDecimal,
     //val pricePercentageInDay: BigDecimal,
+    val lastCandleVolume: Long,
+    val medianVolume: Long,
     val details: String = ""
 )
 
+fun AlertResult.isAlert(volumeXMedian: BigDecimal): Boolean {
+    return lastCandleVolume.toBigDecimal() > volumeXMedian * medianVolume.toBigDecimal()
+}
+
 data class TickerWithAlert (
     val ticker: TickerInfo,
-    val indicator: AlertResult
+    val alert: AlertResult
 )
 
 fun findMedian(numbers: List<Long>): Long {

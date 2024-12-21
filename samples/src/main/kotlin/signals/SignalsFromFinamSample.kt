@@ -11,7 +11,6 @@ import org.cryptolosers.trading.connector.Connector
 import org.cryptolosers.trading.model.*
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import java.math.RoundingMode
-import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -61,7 +60,7 @@ suspend fun main() {
                                 getCandlesCount(ticker.ticker, Timeframe.MIN15),
                                 Session.CURRENT_AND_PREVIOUS
                             )
-                            val alert = volumeAlerts.isBigVolumeOnStartSession(candles, LocalDate.now())
+                            val alert = volumeAlerts.isBigVolume(candles)
                             if (alert != null) {
                                 printSignals.add(TickerWithAlert(ticker, alert))
                             }
@@ -80,8 +79,8 @@ suspend fun main() {
                 logger.info { "Volume signals at 10:15, 15min bar: " }
                 printSignals.forEach {
                     println("${it.ticker.shortDescription}(${it.ticker.ticker.symbol}) " +
-                            "volume: ${it.indicator.volumeX?.toStringWithSign()}%, " +
-                             "price: ${it.indicator.pricePercentage?.toStringWithSign()}%")
+                            "volume: ${it.alert.volumeX?.toStringWithSign()}%, " +
+                             "price: ${it.alert.pricePercentage?.toStringWithSign()}%")
                 }
                 logger.info { "Время работы загрузки свечей: " + ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(3, RoundingMode.HALF_DOWN) + " сек" }
 

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="KotoTraderKt" type="JetRunConfigurationType">
-    <option name="MAIN_CLASS_NAME" value="org.cryptolosers.frontend.desktop.KotoTraderKt" />
+  <configuration default="false" name="KotoTraderDesktop" type="JetRunConfigurationType">
+    <option name="MAIN_CLASS_NAME" value="org.cryptolosers.frontend.desktop.KotoTraderDesktopKt" />
     <module name="koto-trader.frontend.desktop.main" />
     <shortenClasspath name="NONE" />
     <method v="2">

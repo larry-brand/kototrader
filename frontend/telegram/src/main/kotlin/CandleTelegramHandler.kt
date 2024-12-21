@@ -7,6 +7,7 @@ import org.cryptolosers.commons.toStringWithSign
 import org.cryptolosers.indicators.TickerWithAlert
 import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
+import org.cryptolosers.indicators.isAlert
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.model.Exchanges
 import org.cryptolosers.trading.model.Session
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 class CandleTelegramHandler(
-    private val bot: TraderTelegramBot,
+    private val bot: TradingTelegramBot,
     private val tradingApi: ViewTradingApi,
     private val favoriteTickers: List<Ticker>,
     private val timeframe: Timeframe
@@ -52,8 +53,8 @@ class CandleTelegramHandler(
             return
         }
 
-        val favoriteAlerts = getFavoriteAlerts(allAlerts)
-        val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts)
+        val favoriteAlerts = getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers)
+        val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts, volumeXMedianNotFavoriteTickers)
 
         logger.info { "Время работы загрузки свечей: " +
                 ((System.currentTimeMillis().toDouble() - startTime) / 1000).toBigDecimal().setScale(2, RoundingMode.HALF_DOWN) + " сек" }
@@ -148,19 +149,19 @@ class CandleTelegramHandler(
         }
     }
 
-    private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>): List<TickerWithAlert> {
+    private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
         val favoriteTickersOrderIndex = favoriteTickers.withIndex().associate { it.value to it.index }
-        return allAlerts.filter { favoriteTickers.contains(it.ticker.ticker) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
+        return allAlerts.filter { favoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
     }
 
-    private fun getNotFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>): List<TickerWithAlert> {
-        val notFavoriteAlerts = allAlerts.toMutableList()
+    private fun getNotFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
+        val notFavoriteAlerts = allAlerts.filter { it.alert.isAlert(volumeXMedian) }.toMutableList()
         notFavoriteAlerts.removeIf { favoriteAlerts.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
         notFavoriteAlerts.sortBy {
-            if (it.indicator.volumeX!! >= BigDecimal(7) && it.indicator.pricePercentage!!.abs() >= BigDecimal(1)) {
-                it.indicator.volumeX!! * it.indicator.pricePercentage!!
+            if (it.alert.volumeX!! >= BigDecimal(7) && it.alert.pricePercentage!!.abs() >= BigDecimal(1)) {
+                it.alert.volumeX!! * it.alert.pricePercentage!!
             } else {
-                it.indicator.volumeX!!
+                it.alert.volumeX!!
             }
         }
         return notFavoriteAlerts.take(showNotFavoriteTickersSize)
@@ -189,14 +190,14 @@ class CandleTelegramHandler(
 
     private fun List<TickerWithAlert>.toText(favorite: Boolean, debug: Boolean = false): String {
         return joinToString(separator = "\n") {
-            val vBold = if (it.indicator.volumeX!! > BigDecimal(7)) "*" else ""
-            val pBold = if (it.indicator.pricePercentage!! > BigDecimal(1)) "*" else ""
-            val isImportant = if (favorite && (it.indicator.volumeX!! > BigDecimal(7) && it.indicator.pricePercentage!! > BigDecimal(1))) "❗️" else ""
+            val vBold = if (it.alert.volumeX!! > BigDecimal(7)) "*" else ""
+            val pBold = if (it.alert.pricePercentage!! > BigDecimal(1)) "*" else ""
+            val isImportant = if (favorite && (it.alert.volumeX!! > BigDecimal(7) && it.alert.pricePercentage!! > BigDecimal(1))) "❗️" else ""
             val star = if (favorite) "★" else ""
-            val debugText = if (debug) { " " + it.indicator.details } else ""
+            val debugText = if (debug) { " " + it.alert.details } else ""
             ("$star${isImportant}#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
-                    "${vBold}x${it.indicator.volumeX}${vBold} " +
-                    "${pBold}${it.indicator.pricePercentage?.toStringWithSign()}%${pBold}${debugText}")
+                    "${vBold}x${it.alert.volumeX}${vBold} " +
+                    "${pBold}${it.alert.pricePercentage?.toStringWithSign()}%${pBold}${debugText}")
         }
     }
 }
