@@ -16,7 +16,7 @@ class VolumeAlerts() {
         val days = 22 * 2 // days for calculate volume
     }
 
-    suspend fun isBigVolume(candles: List<Candle>): AlertResult? {
+    suspend fun isBigVolume(candles: List<Candle>): BigVolumeAlertResult? {
         if (candles.size <= 10) {
             logger.warn { "Слишком мало свечек: ${candles.size}" }
             return null
@@ -27,15 +27,14 @@ class VolumeAlerts() {
         val prevCandleIndex = if (candles.indexOf(lastCandle) != 0) (candles.indexOf(lastCandle) - 1) else 0
         val prevCandle = candles[prevCandleIndex]
 
-        val scale = 2
         val volumeX = lastCandle.let {
             ((it.volume.toDouble() / medianVolume.toDouble())).toBigDecimal().setScale(1, RoundingMode.HALF_DOWN)
         }
         val pricePercentage = lastCandle.let {
-            ((it.closePrice.toDouble() - prevCandle.closePrice.toDouble()) / prevCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(scale, RoundingMode.HALF_DOWN)
+            ((it.closePrice.toDouble() - prevCandle.closePrice.toDouble()) / prevCandle.closePrice.toDouble() * 100).toBigDecimal().setScale(2, RoundingMode.HALF_DOWN)
         }
 
-        return AlertResult(
+        return BigVolumeAlertResult(
             volumeX = volumeX,
             pricePercentage = pricePercentage,
             lastCandleVolume = lastCandle.volume,
@@ -124,7 +123,7 @@ fun getCandlesCount(ticker: Ticker, timeframe: Timeframe): Int {
 
 }
 
-data class AlertResult(
+data class BigVolumeAlertResult(
     val volumeX: BigDecimal,
     val pricePercentage: BigDecimal,
     //val pricePercentageInDay: BigDecimal,
@@ -133,13 +132,13 @@ data class AlertResult(
     val details: String = ""
 )
 
-fun AlertResult.isAlert(volumeXMedian: BigDecimal): Boolean {
+fun BigVolumeAlertResult.isAlert(volumeXMedian: BigDecimal): Boolean {
     return lastCandleVolume.toBigDecimal() > volumeXMedian * medianVolume.toBigDecimal()
 }
 
 data class TickerWithAlert (
     val ticker: TickerInfo,
-    val alert: AlertResult
+    val alert: BigVolumeAlertResult
 )
 
 fun findMedian(numbers: List<Long>): Long {

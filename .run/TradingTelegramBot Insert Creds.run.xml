@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="TradingTelegramBot Insert Creds" type="JetRunConfigurationType">
+    <option name="MAIN_CLASS_NAME" value="org.cryptolosers.telegrambot.TradingTelegramBotMainKt" />
+    <module name="koto-trader.frontend.telegram.main" />
+    <shortenClasspath name="NONE" />
+    <option name="VM_PARAMETERS" value="-DbotToken=&quot;INSERT_BOT_TOKEN&quot; -DbotUsername=&quot;INSERT_BOT_USERNAME&quot; -DbotMyChatId=&quot;INSERT_YOUR_CHAT_ID&quot;" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

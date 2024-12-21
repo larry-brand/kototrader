@@ -31,6 +31,7 @@ fun main() {
         try {
             val botsApi = TelegramBotsApi(DefaultBotSession::class.java)
             botsApi.registerBot(bot)
+            logger.info { "Telegram бот зарегистрирован, инициализирован" }
         } catch (e: TelegramApiException) {
             e.printStackTrace()
         }
