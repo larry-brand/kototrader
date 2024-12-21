@@ -35,7 +35,7 @@ class VolumeAlerts() {
             pricePercentage = pricePercentage,
             lastCandleVolume = lastCandle.volume,
             medianVolume = medianVolume,
-            details = "lastCandle: $lastCandle , prevCandle: $prevCandle, median volume: $medianVolume"
+            details = "lastCandle: $lastCandle , prevCandle: $prevCandle, medianVolume: $medianVolume"
         )
 
     }

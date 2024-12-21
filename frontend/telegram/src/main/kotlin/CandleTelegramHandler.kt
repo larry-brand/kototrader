@@ -27,19 +27,21 @@ import kotlin.collections.ArrayList
 class CandleTelegramHandler(
     private val bot: TradingTelegramBot,
     private val tradingApi: ViewTradingApi,
-    private val favoriteTickers: List<Ticker>,
     private val timeframe: Timeframe
 ): Runnable {
     private val volumeAlerts = VolumeAlerts()
     private val logger = KotlinLogging.logger {}
 
+    /**
+     * Метод выполняется раз в 15 минут либо 1 час, скачивает свечки, формирует алерты и пишет их в чат бота
+     */
     override fun run() {
         val nowString = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
         if (!checkWorkTime()) {
             return
         }
 
-        logger.info { "\nЗапуск создания оповещений:" }
+        logger.info { "------------------ Запуск создания оповещений для $timeframe ------------------" }
         val startTime = System.currentTimeMillis()
         val executorService = Executors.newFixedThreadPool(5)
         val allAlerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
@@ -50,7 +52,8 @@ class CandleTelegramHandler(
             return
         }
 
-        val favoriteAlerts = getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers)
+        val activeFavoriteTickers = getActiveFavoriteTickets()
+        val favoriteAlerts = getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers, activeFavoriteTickers)
         val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts, volumeXMedianNotFavoriteTickers)
 
         logger.info { "Время работы загрузки свечей: " +
@@ -74,6 +77,21 @@ class CandleTelegramHandler(
             return false
         }
         return true
+    }
+
+    private fun getActiveFavoriteTickets(): List<Ticker> {
+        return runBlocking {
+            favoriteTickers.mapNotNull { f ->
+                val foundF = tradingApi.getAllTickers()
+                    .firstOrNull { it.ticker.symbol == f && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }
+                if (foundF != null) {
+                    foundF.ticker
+                } else {
+                    logger.warn { "Favorite тикер не найден, тикер: $f " }
+                    null
+                }
+            }
+        }
     }
 
     private fun makeAlerts(tickers: List<String>, executorService: ExecutorService, allAlerts: MutableList<TickerWithAlert>) {
@@ -158,9 +176,9 @@ class CandleTelegramHandler(
         return true
     }
 
-    private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
-        val favoriteTickersOrderIndex = favoriteTickers.withIndex().associate { it.value to it.index }
-        return allAlerts.filter { favoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
+    private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, volumeXMedian: BigDecimal, activeFavoriteTickers: List<Ticker>): List<TickerWithAlert> {
+        val favoriteTickersOrderIndex = activeFavoriteTickers.withIndex().associate { it.value to it.index }
+        return allAlerts.filter { activeFavoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
     }
 
     private fun getNotFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
@@ -173,7 +191,7 @@ class CandleTelegramHandler(
                 it.alert.volumeX
             }
         }
-        return notFavoriteAlerts.take(showNotFavoriteTickersSize)
+        return notFavoriteAlerts.take(showCountNotFavoriteTickers)
     }
 
     private fun Timeframe.toMin(): Int {
@@ -199,14 +217,14 @@ class CandleTelegramHandler(
 
     private fun List<TickerWithAlert>.toText(favorite: Boolean, debug: Boolean = false): String {
         return joinToString(separator = "\n") {
-            val vBold = if (it.alert.volumeX!! > BigDecimal(7)) "*" else ""
-            val pBold = if (it.alert.pricePercentage!! > BigDecimal(1)) "*" else ""
-            val isImportant = if (favorite && (it.alert.volumeX!! > BigDecimal(7) && it.alert.pricePercentage!! > BigDecimal(1))) "❗️" else ""
+            val vBold = if (it.alert.volumeX > BigDecimal(7)) "*" else ""
+            val pBold = if (it.alert.pricePercentage > BigDecimal(1)) "*" else ""
+            val isImportant = if (favorite && (it.alert.volumeX > BigDecimal(7) && it.alert.pricePercentage > BigDecimal(1))) "❗️" else ""
             val star = if (favorite) "★" else ""
             val debugText = if (debug) { " " + it.alert.details } else ""
             ("$star${isImportant}#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
                     "${vBold}x${it.alert.volumeX}${vBold} " +
-                    "${pBold}${it.alert.pricePercentage?.toStringWithSign()}%${pBold}${debugText}")
+                    "${pBold}${it.alert.pricePercentage.toStringWithSign()}%${pBold}${debugText}")
         }
     }
 }
