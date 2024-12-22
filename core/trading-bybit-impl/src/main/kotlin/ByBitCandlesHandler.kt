@@ -8,12 +8,15 @@ import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import mu.KotlinLogging
 import org.cryptolosers.trading.model.Candle
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 class ByBitCandlesHandler {
+
+    private val logger = KotlinLogging.logger {}
 
     suspend fun getCandles(symbol: String, interval: String, limit: Int): List<Candle> {
         val client = HttpClient {
@@ -29,7 +32,7 @@ class ByBitCandlesHandler {
                 parameter("interval", interval)
                 parameter("limit", limit)
             }
-            println(httpResponse.bodyAsText())
+            logger.debug (httpResponse.bodyAsText())
             val response: KlineResponse = httpResponse.body()
 
             if (response.retCode == 0) {
@@ -41,7 +44,7 @@ class ByBitCandlesHandler {
             println("Ошибка при запросе данных: ${e.message}")
             return emptyList()
         } finally {
-            client.close() // Закрываем клиент
+            client.close()
         }
     }
 

@@ -7,11 +7,17 @@ val fortsMap = linkedMapOf(
     "SiH5" to LocalDate.parse("2024-12-19"),
 )
 
-val lowLiquidFavorite = """MTLRP""".split("\n")
+val lowLiquidFavorite = """
+MTLRP
+""".trim().split("\n")
 
-val cryptoTickers = listOf("BTCUSDT", "TONUSDT")
+val cryptoTickers = """
+BTCUSDT
+TONUSDT
+""".trim().split("\n")
 
-val moexLiquidTickers = (fortsMap.keys + """T
+val moexLiquidTickers = (fortsMap.keys.toList() + """
+T
 SBER
 GAZP
 LKOH
@@ -109,9 +115,11 @@ HNFG
 RBCM
 DELI
 ROLO
-AKRN""".split("\n") + lowLiquidFavorite).distinct()
+AKRN
+""".trim().split("\n") + lowLiquidFavorite).distinct()
 
-val moexAllTickers = fortsMap.values + """SBER
+val moexAllTickers = fortsMap.values + """
+SBER
 SBERP
 ROSN
 LKOH
@@ -365,4 +373,5 @@ DIOD
 KUZB
 SVET
 SVETP
-BISVP""".split("\n")
+BISVP
+""".trim().split("\n")

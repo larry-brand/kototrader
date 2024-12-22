@@ -19,9 +19,9 @@ val DEBUG = true
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 val showCountNotFavoriteTickers = 5
-val volumeXMedianFavoriteTickers = BigDecimal(0)
+val volumeXMedianFavoriteTickers = BigDecimal(0.1)
 val volumeXMedianNotFavoriteTickers = BigDecimal(5)
-val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP")
+val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
 
 fun main() {
     val logger = KotlinLogging.logger {}

@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
-import kotlin.concurrent.thread
 
 class CandleTelegramHandler(
     private val bot: TradingTelegramBot,
@@ -47,20 +46,22 @@ class CandleTelegramHandler(
         logger.info { "------------------ Запуск создания оповещений для $timeframe ------------------" }
         val startTime = System.currentTimeMillis()
         val executorService = Executors.newFixedThreadPool(5)
-        val allAlerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
+        val allStockAlerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
 
-        makeAlerts(moexLiquidTickers, executorService, allAlerts)
+        makeAlerts(moexLiquidTickers, executorService, allStockAlerts)
 
         if (!checkMakingAlertsFinished(executorService)) {
             return
         }
 
-        val cryptoAllAlerts = runBlocking {
+        val allCryptoAlerts = runBlocking {
             makeCryptoAlerts(cryptoTickers)
         }
 
+        val allAlerts = allStockAlerts + allCryptoAlerts
+
         val activeFavoriteTickers = getActiveFavoriteTickets()
-        val favoriteAlerts = cryptoAllAlerts + getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers, activeFavoriteTickers)
+        val favoriteAlerts = getFavoriteAlerts(allAlerts, volumeXMedianFavoriteTickers, activeFavoriteTickers)
         val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts, volumeXMedianNotFavoriteTickers)
 
         logger.info { "Время работы загрузки свечей: " +
@@ -88,13 +89,16 @@ class CandleTelegramHandler(
 
     private fun getActiveFavoriteTickets(): List<Ticker> {
         return runBlocking {
-            favoriteTickers.mapNotNull { f ->
-                val foundF = tradingApi.getAllTickers()
-                    .firstOrNull { it.ticker.symbol == f && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }
-                if (foundF != null) {
-                    foundF.ticker
+            favoriteTickers.mapNotNull { t ->
+                val foundT = tradingApi.getAllTickers()
+                    .firstOrNull { it.ticker.symbol == t && (it.ticker.exchange == Exchanges.MOEX || it.ticker.exchange == Exchanges.MOEX_FORTS) }
+                val foundCryptoT = cryptoTradingApi.getAllTickers().firstOrNull { it.ticker.symbol == t }
+                if (foundT != null) {
+                    foundT.ticker
+                } else if (foundCryptoT != null) {
+                    foundCryptoT.ticker
                 } else {
-                    logger.warn { "Favorite тикер не найден, тикер: $f " }
+                    logger.warn { "Favorite тикер не найден, тикер: $t " }
                     null
                 }
             }
@@ -207,12 +211,12 @@ class CandleTelegramHandler(
         return true
     }
 
-    private fun getFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, volumeXMedian: BigDecimal, activeFavoriteTickers: List<Ticker>): List<TickerWithAlert> {
+    private fun getFavoriteAlerts(allAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal, activeFavoriteTickers: List<Ticker>): List<TickerWithAlert> {
         val favoriteTickersOrderIndex = activeFavoriteTickers.withIndex().associate { it.value to it.index }
         return allAlerts.filter { activeFavoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
     }
 
-    private fun getNotFavoriteAlerts(allAlerts: MutableList<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
+    private fun getNotFavoriteAlerts(allAlerts: List<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
         val notFavoriteAlerts = allAlerts.filter { it.alert.isAlert(volumeXMedian) }.toMutableList()
         notFavoriteAlerts.removeIf { favoriteAlerts.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
         notFavoriteAlerts.sortedByDescending {
