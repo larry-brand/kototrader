@@ -11,12 +11,12 @@ val lowLiquidFavorite = """
 MTLRP
 """.trim().split("\n")
 
-val cryptoTickers = """
+val allCryptoCfgTickers = """
 BTCUSDT
 TONUSDT
 """.trim().split("\n")
 
-val moexLiquidTickers = (fortsMap.keys.toList() + """
+val allStockCfgTickers = (fortsMap.keys.toList() + """
 T
 SBER
 GAZP

@@ -2,8 +2,8 @@ package org.cryptolosers.telegrambot
 
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import org.cryptolosers.commons.cryptoTickers
-import org.cryptolosers.commons.moexLiquidTickers
+import org.cryptolosers.commons.allCryptoCfgTickers
+import org.cryptolosers.commons.allStockCfgTickers
 import org.cryptolosers.commons.toStringWithSign
 import org.cryptolosers.indicators.TickerWithAlert
 import org.cryptolosers.indicators.VolumeAlerts
@@ -48,14 +48,14 @@ class CandleTelegramHandler(
         val executorService = Executors.newFixedThreadPool(5)
         val allStockAlerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
 
-        makeAlerts(moexLiquidTickers, executorService, allStockAlerts)
+        makeAlerts(allStockCfgTickers, executorService, allStockAlerts)
 
         if (!checkMakingAlertsFinished(executorService)) {
             return
         }
 
         val allCryptoAlerts = runBlocking {
-            makeCryptoAlerts(cryptoTickers)
+            makeCryptoAlerts(allCryptoCfgTickers)
         }
 
         val allAlerts = allStockAlerts + allCryptoAlerts

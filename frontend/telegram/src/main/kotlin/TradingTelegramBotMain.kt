@@ -10,6 +10,7 @@ import org.telegram.telegrambots.meta.TelegramBotsApi
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -20,7 +21,7 @@ val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 val showCountNotFavoriteTickers = 5
 val volumeXMedianFavoriteTickers = BigDecimal(0.1)
-val volumeXMedianNotFavoriteTickers = BigDecimal(5)
+val volumeXMedianNotFavoriteTickers = BigDecimal(0.1)
 val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
 
 fun main() {
@@ -40,15 +41,32 @@ fun main() {
     thread {
         val conn  = Connector(TransaqConnector())
         conn.connect()
-        val tradingApi: ViewTradingApi = conn.tradingApi()
+        val stockTradingApi: ViewTradingApi = conn.tradingApi()
         val cryptoTradingApi: ViewTradingApi = ByBitViewTradingApi()
+        val appCfg = AppCfg(stockTradingApi, cryptoTradingApi)
 
         val scheduler = Executors.newScheduledThreadPool(1)
         val task = Runnable {
-            CandleTelegramHandler(bot, tradingApi, cryptoTradingApi, Timeframe.MIN15).run()
+            val now = LocalDateTime.now()
+
+            // 15 min
+            val stockAlerts = StockAlertBuilder(stockTradingApi, Timeframe.MIN15, appCfg).build() +
+                    CryptoAlertBuilder(cryptoTradingApi, Timeframe.MIN15, appCfg).build()
+
+            val alertSender = AlertSender(bot, Timeframe.MIN15, appCfg)
+            val myUserSettings = UserSettings(
+                favoriteTickers, showCountNotFavoriteTickers, volumeXMedianFavoriteTickers, volumeXMedianNotFavoriteTickers
+            )
+            alertSender.send(stockAlerts, now, myUserSettings)
+
+            // 1h
             val minute = Calendar.getInstance().get(Calendar.MINUTE)
             if (minute in 0..3) {
-                CandleTelegramHandler(bot, tradingApi, cryptoTradingApi, Timeframe.HOUR1).run()
+                val stockAlertsH1 = StockAlertBuilder(stockTradingApi, Timeframe.HOUR1, appCfg).build() +
+                        CryptoAlertBuilder(cryptoTradingApi, Timeframe.HOUR1, appCfg).build()
+
+                val alertSenderH1 = AlertSender(bot, Timeframe.HOUR1, appCfg)
+                alertSenderH1.send(stockAlertsH1, now, myUserSettings)
             }
         }
 
@@ -65,4 +83,12 @@ fun main() {
         scheduler.scheduleAtFixedRate(task, delay.toLong(), 15 * 60, TimeUnit.SECONDS)
     }
 
+
 }
+
+data class UserSettings(
+    val favoriteTickers: List<String>,
+    val showCountNotFavoriteTickers: Int,
+    val volumeXMedianFavoriteTickers: BigDecimal,
+    val volumeXMedianNotFavoriteTickers: BigDecimal
+)
