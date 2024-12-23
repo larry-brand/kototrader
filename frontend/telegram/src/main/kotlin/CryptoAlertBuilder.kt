@@ -2,7 +2,7 @@ package org.cryptolosers.telegrambot
 
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import org.cryptolosers.indicators.TickerWithAlert
+import org.cryptolosers.indicators.DraftAlert
 import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
@@ -16,15 +16,15 @@ class CryptoAlertBuilder(
     private val volumeAlerts = VolumeAlerts()
     private val logger = KotlinLogging.logger {}
 
-    fun build(): List<TickerWithAlert> {
+    fun build(): List<DraftAlert> {
         val allCryptoAlerts = runBlocking {
             makeCryptoAlerts()
         }
         return allCryptoAlerts
     }
 
-    private suspend fun makeCryptoAlerts(): MutableList<TickerWithAlert> {
-        val allAlerts = mutableListOf<TickerWithAlert>()
+    private suspend fun makeCryptoAlerts(): MutableList<DraftAlert> {
+        val allAlerts = mutableListOf<DraftAlert>()
         appCfg.cryptoCfgTickers.forEach { t ->
             val candles = cryptoTradingApi.getLastCandles(
                 t.ticker,
@@ -32,7 +32,7 @@ class CryptoAlertBuilder(
                 getCandlesCount(t.ticker, timeframe),
             )
             val alert = volumeAlerts.isBigVolume(candles)
-            allAlerts.add(TickerWithAlert(t, alert))
+            allAlerts.add(DraftAlert(t, alert))
         }
         return allAlerts
     }

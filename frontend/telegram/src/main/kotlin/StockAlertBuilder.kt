@@ -2,7 +2,7 @@ package org.cryptolosers.telegrambot
 
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import org.cryptolosers.indicators.TickerWithAlert
+import org.cryptolosers.indicators.DraftAlert
 import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
@@ -27,7 +27,7 @@ class StockAlertBuilder(
     private val volumeAlerts = VolumeAlerts()
     private val logger = KotlinLogging.logger {}
 
-    fun build(): List<TickerWithAlert> {
+    fun build(): List<DraftAlert> {
         if (!checkWorkTime()) {
             return emptyList()
         }
@@ -35,7 +35,7 @@ class StockAlertBuilder(
         logger.info { "------------------ Запуск создания оповещений для $timeframe ------------------" }
         val startTime = System.currentTimeMillis()
         val executorService = Executors.newFixedThreadPool(5)
-        val alerts = Collections.synchronizedList(ArrayList<TickerWithAlert>())
+        val alerts = Collections.synchronizedList(ArrayList<DraftAlert>())
 
         makeAlerts(executorService, alerts)
 
@@ -74,7 +74,7 @@ class StockAlertBuilder(
         }
     }
 
-    private fun makeAlerts(executorService: ExecutorService, alerts: MutableList<TickerWithAlert>) {
+    private fun makeAlerts(executorService: ExecutorService, alerts: MutableList<DraftAlert>) {
         appCfg.stockCfgTickers.forEach { t ->
             executorService.submit {
                 runBlocking {
@@ -88,7 +88,7 @@ class StockAlertBuilder(
                     }
 
                     val alert = volumeAlerts.isBigVolume(candles)
-                    alerts.add(TickerWithAlert(t, alert))
+                    alerts.add(DraftAlert(t, alert))
 
                 }
             }

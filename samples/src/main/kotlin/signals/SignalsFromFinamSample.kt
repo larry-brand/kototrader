@@ -3,7 +3,7 @@ package org.cryptolosers.samples.signals
 import kotlinx.coroutines.*
 import mu.KotlinLogging
 import org.cryptolosers.commons.toStringWithSign
-import org.cryptolosers.indicators.TickerWithAlert
+import org.cryptolosers.indicators.DraftAlert
 import org.cryptolosers.indicators.VolumeAlerts
 import org.cryptolosers.indicators.getCandlesCount
 import org.cryptolosers.trading.ViewTradingApi
@@ -39,7 +39,7 @@ suspend fun main() {
                 val startTime = System.currentTimeMillis()
                 val executorService = Executors.newFixedThreadPool(5)
 
-                val printSignals = Collections.synchronizedList(ArrayList<TickerWithAlert>())
+                val printSignals = Collections.synchronizedList(ArrayList<DraftAlert>())
                 moexWatchList.forEach { t ->
                     executorService.submit {
                         runBlocking {
@@ -62,7 +62,7 @@ suspend fun main() {
                             )
                             val alert = volumeAlerts.isBigVolume(candles)
                             if (alert != null) {
-                                printSignals.add(TickerWithAlert(ticker, alert))
+                                printSignals.add(DraftAlert(ticker, alert))
                             }
                         }
                     }

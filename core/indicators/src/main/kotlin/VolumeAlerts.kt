@@ -132,7 +132,7 @@ fun BigVolumeAlertResult.isAlert(volumeXMedian: BigDecimal): Boolean {
     return lastCandleVolume.toBigDecimal() > volumeXMedian * medianVolume.toBigDecimal()
 }
 
-data class TickerWithAlert (
+data class DraftAlert (
     val ticker: TickerInfo,
     val alert: BigVolumeAlertResult
 )

@@ -3,7 +3,7 @@ package org.cryptolosers.telegrambot
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.cryptolosers.commons.toStringWithSign
-import org.cryptolosers.indicators.TickerWithAlert
+import org.cryptolosers.indicators.DraftAlert
 import org.cryptolosers.indicators.isAlert
 import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.Timeframe
@@ -20,15 +20,16 @@ class AlertSender(
 ) {
     private val logger = KotlinLogging.logger {}
 
-    fun send(allAlerts: List<TickerWithAlert>, now: LocalDateTime, userSettings: UserSettings) {
+    fun send(allAlerts: List<DraftAlert>, now: LocalDateTime, userSettings: UserSettings) {
         val nowString = now.format(DateTimeFormatter.ofPattern("HH:mm"))
 
         val activeFavoriteTickers = getActiveFavoriteTickets(userSettings.favoriteTickers)
-        val favoriteAlerts = getFavoriteAlerts(allAlerts, userSettings.volumeXMedianFavoriteTickers, activeFavoriteTickers)
-        val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, favoriteAlerts, userSettings.volumeXMedianNotFavoriteTickers)
+        val tickersAlerts = getTickersAlerts(allAlerts, userSettings)
+        val favoriteAlerts = getFavoriteAlerts(allAlerts, activeFavoriteTickers, userSettings)
+        val notFavoriteAlerts = getNotFavoriteAlerts(allAlerts, tickersAlerts + favoriteAlerts, userSettings)
 
-        if (favoriteAlerts.isNotEmpty() || notFavoriteAlerts.isNotEmpty()) {
-            sendAlerts(favoriteAlerts, notFavoriteAlerts, nowString)
+        if (tickersAlerts.isNotEmpty() || favoriteAlerts.isNotEmpty() || notFavoriteAlerts.isNotEmpty()) {
+            sendAlerts(tickersAlerts + favoriteAlerts, notFavoriteAlerts, nowString)
         } else {
             logger.info { "Не найдено повышенных объемов на ${timeframe.toText()} в $nowString" }
         }
@@ -48,33 +49,50 @@ class AlertSender(
         }
     }
 
-    private fun getFavoriteAlerts(allAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal, activeFavoriteTickers: List<Ticker>): List<TickerWithAlert> {
-        val favoriteTickersOrderIndex = activeFavoriteTickers.withIndex().associate { it.value to it.index }
-        return allAlerts.filter { activeFavoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
-    }
-
-    private fun getNotFavoriteAlerts(allAlerts: List<TickerWithAlert>, favoriteAlerts: List<TickerWithAlert>, volumeXMedian: BigDecimal): List<TickerWithAlert> {
-        val notFavoriteAlerts = allAlerts.filter { it.alert.isAlert(volumeXMedian) }.toMutableList()
-        notFavoriteAlerts.removeIf { favoriteAlerts.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
-        notFavoriteAlerts.sortedByDescending {
-            if (it.alert.volumeX >= BigDecimal(7) && it.alert.pricePercentage.abs() >= BigDecimal(1)) {
-                it.alert.volumeX * it.alert.pricePercentage
-            } else {
-                it.alert.volumeX
-            }
+    private fun getTickersAlerts(allAlerts: List<DraftAlert>, userSettings: UserSettings): List<DraftAlert> {
+        val alerts = userSettings.volumePriceAlerts.filter { it.target is TickerAlertTargetSettings && it.timeframe == timeframe }
+        return alerts.mapNotNull { a ->
+            allAlerts.firstOrNull { a.target is TickerAlertTargetSettings && a.target.ticker == it.ticker.ticker.symbol && it.alert.isAlert(a.volumeXMedian) }
         }
-        return notFavoriteAlerts.take(showCountNotFavoriteTickers)
     }
 
-    private fun sendAlerts(favoriteAlerts: List<TickerWithAlert>, notFavoriteAlerts: List<TickerWithAlert>, nowString: String) {
-        val favoriteTickersText = favoriteAlerts.toText(favorite = true)
-        val notFavoriteTickersText = notFavoriteAlerts.toText(favorite = false)
-        val favoriteTickersLoggerText = favoriteAlerts.toText(favorite = true, debug = true)
-        val notFavoriteTickersLoggerText = notFavoriteAlerts.toText(favorite = false, debug = true)
+    private fun getFavoriteAlerts(allAlerts: List<DraftAlert>, activeFavoriteTickers: List<Ticker>, userSettings: UserSettings): List<DraftAlert> {
+        val favoriteTickersOrderIndex = activeFavoriteTickers.withIndex().associate { it.value to it.index }
+        val alert = userSettings.volumePriceAlerts.firstOrNull { it.target is TickerGroupTargetSettings && it.target.group == TickerGroupSettings.FavoriteTickers && it.timeframe == timeframe }
+        if (alert != null) {
+            return allAlerts.filter { activeFavoriteTickers.contains(it.ticker.ticker) && it.alert.isAlert(alert.volumeXMedian) }.sortedBy { favoriteTickersOrderIndex[it.ticker.ticker] }
+        } else {
+            return emptyList()
+        }
+    }
 
-        val favoriteSeparator = if (favoriteTickersText.isNotEmpty()) "\n---\n" else ""
-        val messageText = "⚠️ Повышенные объемы на ${timeframe.toText()} в $nowString:\n$favoriteTickersText${favoriteSeparator}$notFavoriteTickersText"
-        logger.info { "Повышенные объемы на ${timeframe.toText()} в $nowString:\n$favoriteTickersLoggerText${favoriteSeparator}$notFavoriteTickersLoggerText" }
+    private fun getNotFavoriteAlerts(allAlerts: List<DraftAlert>, favoriteAlerts: List<DraftAlert>, userSettings: UserSettings): List<DraftAlert> {
+        val alert = userSettings.volumePriceAlerts.firstOrNull { it.target is TickerGroupTargetSettings && it.target.group == TickerGroupSettings.AllTickers && it.timeframe == timeframe }
+        if (alert != null) {
+            val notFavoriteAlerts = allAlerts.filter { it.alert.isAlert(alert.volumeXMedian) }.toMutableList()
+            notFavoriteAlerts.removeIf { favoriteAlerts.map { f -> f.ticker.ticker }.contains(it.ticker.ticker) }
+            notFavoriteAlerts.sortedByDescending {
+                if (it.alert.volumeX >= BigDecimal(7) && it.alert.pricePercentage.abs() >= BigDecimal(1)) {
+                    it.alert.volumeX * it.alert.pricePercentage
+                } else {
+                    it.alert.volumeX
+                }
+            }
+            return notFavoriteAlerts.take(userSettings.notFavoriteTickersAlertsLimit)
+        } else {
+            return emptyList()
+        }
+    }
+
+    private fun sendAlerts(tickersAndFavoriteAlerts: List<DraftAlert>, notFavoriteAlerts: List<DraftAlert>, nowString: String) {
+        val tickersAndFavoriteTickersText = tickersAndFavoriteAlerts.toText(star = true)
+        val notFavoriteTickersText = notFavoriteAlerts.toText(star = false)
+        val tickersAndFavoriteTickersLoggerText = tickersAndFavoriteAlerts.toText(star = true, debug = true)
+        val notFavoriteTickersLoggerText = notFavoriteAlerts.toText(star = false, debug = true)
+
+        val favoriteSeparator = if (tickersAndFavoriteTickersText.isNotEmpty()) "\n---\n" else ""
+        val messageText = "⚠️ Повышенные объемы на ${timeframe.toText()} в $nowString:\n$tickersAndFavoriteTickersText${favoriteSeparator}$notFavoriteTickersText"
+        logger.info { "Повышенные объемы на ${timeframe.toText()} в $nowString:\n$tickersAndFavoriteTickersLoggerText${favoriteSeparator}$notFavoriteTickersLoggerText" }
         bot.chatIds.forEach { id ->
             val message = SendMessage()
             message.chatId = id
@@ -84,12 +102,12 @@ class AlertSender(
         }
     }
 
-    private fun List<TickerWithAlert>.toText(favorite: Boolean, debug: Boolean = false): String {
+    private fun List<DraftAlert>.toText(star: Boolean, debug: Boolean = false): String {
         return joinToString(separator = "\n") {
             val vBold = if (it.alert.volumeX > BigDecimal(7)) "*" else ""
             val pBold = if (it.alert.pricePercentage > BigDecimal(1)) "*" else ""
-            val isImportant = if (favorite && (it.alert.volumeX > BigDecimal(7) && it.alert.pricePercentage > BigDecimal(1))) "❗️" else ""
-            val star = if (favorite) "★" else ""
+            val isImportant = if (star && (it.alert.volumeX > BigDecimal(7) && it.alert.pricePercentage > BigDecimal(1))) "❗️" else ""
+            val star = if (star) "★" else ""
             val debugText = if (debug) { " " + it.alert.details } else ""
             ("$star${isImportant}#${it.ticker.ticker.symbol} ${it.ticker.shortDescription} = " +
                     "${vBold}x${it.alert.volumeX}${vBold} " +

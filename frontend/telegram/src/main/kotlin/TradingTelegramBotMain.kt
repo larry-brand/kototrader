@@ -4,6 +4,7 @@ import mu.KotlinLogging
 import org.cryptolosers.bybit.ByBitViewTradingApi
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
+import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import org.telegram.telegrambots.meta.TelegramBotsApi
@@ -19,10 +20,10 @@ import kotlin.concurrent.thread
 val DEBUG = true
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
-val showCountNotFavoriteTickers = 5
-val volumeXMedianFavoriteTickers = BigDecimal(0.1)
-val volumeXMedianNotFavoriteTickers = BigDecimal(0.1)
-val favoriteTickers = listOf("RIH5", "SiH5", "SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
+private val notFavoriteTickersAlertsLimit = 3
+private val volumeXMedianFavoriteTickers = BigDecimal(2.5)
+private val volumeXMedianNotFavoriteTickers = BigDecimal(4)
+private val favoriteTickers = listOf("SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
 
 fun main() {
     val logger = KotlinLogging.logger {}
@@ -54,9 +55,38 @@ fun main() {
                     CryptoAlertBuilder(cryptoTradingApi, Timeframe.MIN15, appCfg).build()
 
             val alertSender = AlertSender(bot, Timeframe.MIN15, appCfg)
-            val myUserSettings = UserSettings(
-                favoriteTickers, showCountNotFavoriteTickers, volumeXMedianFavoriteTickers, volumeXMedianNotFavoriteTickers
+            val myAlertsSettings = listOf(
+                VolumePriceAlertSettings(
+                    target = TickerAlertTargetSettings("RIH5"),
+                    timeframe = Timeframe.MIN15,
+                    volumeXMedian = BigDecimal(2),
+                ),
+                VolumePriceAlertSettings(
+                    target = TickerAlertTargetSettings("SiH5"),
+                    timeframe = Timeframe.MIN15,
+                    volumeXMedian = BigDecimal(2),
+                ),
+                VolumePriceAlertSettings(
+                    target = TickerGroupTargetSettings(TickerGroupSettings.FavoriteTickers),
+                    timeframe = Timeframe.MIN15,
+                    volumeXMedian = volumeXMedianFavoriteTickers,
+                ), VolumePriceAlertSettings(
+                    target = TickerGroupTargetSettings(TickerGroupSettings.AllTickers),
+                    timeframe = Timeframe.MIN15,
+                    volumeXMedian = volumeXMedianNotFavoriteTickers,
+                ),
+                VolumePriceAlertSettings(
+                    target = TickerAlertTargetSettings("RIH5"),
+                    timeframe = Timeframe.HOUR1,
+                    volumeXMedian = BigDecimal(2),
+                ),
+                VolumePriceAlertSettings(
+                    target = TickerAlertTargetSettings("SiH5"),
+                    timeframe = Timeframe.HOUR1,
+                    volumeXMedian = BigDecimal(2),
+                ),
             )
+            val myUserSettings = UserSettings(favoriteTickers, myAlertsSettings, notFavoriteTickersAlertsLimit)
             alertSender.send(stockAlerts, now, myUserSettings)
 
             // 1h
@@ -88,7 +118,29 @@ fun main() {
 
 data class UserSettings(
     val favoriteTickers: List<String>,
-    val showCountNotFavoriteTickers: Int,
-    val volumeXMedianFavoriteTickers: BigDecimal,
-    val volumeXMedianNotFavoriteTickers: BigDecimal
+    val volumePriceAlerts: List<VolumePriceAlertSettings>,
+
+    val notFavoriteTickersAlertsLimit: Int
 )
+
+data class VolumePriceAlertSettings(
+    val target: AlertTargetSettings,
+    val timeframe: Timeframe,
+
+    val volumeXMedian: BigDecimal
+)
+
+sealed class AlertTargetSettings(
+)
+
+data class TickerAlertTargetSettings(
+    val ticker: String
+): AlertTargetSettings()
+
+data class TickerGroupTargetSettings(
+    val group: TickerGroupSettings
+): AlertTargetSettings()
+
+enum class TickerGroupSettings {
+    FavoriteTickers, AllTickers
+}
