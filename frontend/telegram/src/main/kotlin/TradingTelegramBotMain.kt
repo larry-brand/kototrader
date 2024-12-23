@@ -4,7 +4,6 @@ import mu.KotlinLogging
 import org.cryptolosers.bybit.ByBitViewTradingApi
 import org.cryptolosers.trading.ViewTradingApi
 import org.cryptolosers.trading.connector.Connector
-import org.cryptolosers.trading.model.Ticker
 import org.cryptolosers.trading.model.Timeframe
 import org.cryptolosers.transaq.connector.concurrent.TransaqConnector
 import org.telegram.telegrambots.meta.TelegramBotsApi
@@ -21,8 +20,6 @@ val DEBUG = true
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 private val notFavoriteTickersAlertsLimit = 3
-private val volumeXMedianFavoriteTickers = BigDecimal(2.5)
-private val volumeXMedianNotFavoriteTickers = BigDecimal(4)
 private val favoriteTickers = listOf("SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
 
 fun main() {
@@ -51,7 +48,7 @@ fun main() {
             val now = LocalDateTime.now()
 
             // 15 min
-            val stockAlerts = StockAlertBuilder(stockTradingApi, Timeframe.MIN15, appCfg).build() +
+            val allAlerts = StockAlertBuilder(stockTradingApi, Timeframe.MIN15, appCfg).build() +
                     CryptoAlertBuilder(cryptoTradingApi, Timeframe.MIN15, appCfg).build()
 
             val alertSender = AlertSender(bot, Timeframe.MIN15, appCfg)
@@ -69,11 +66,11 @@ fun main() {
                 VolumePriceAlertSettings(
                     target = TickerGroupTargetSettings(TickerGroupSettings.FavoriteTickers),
                     timeframe = Timeframe.MIN15,
-                    volumeXMedian = volumeXMedianFavoriteTickers,
+                    volumeXMedian = BigDecimal(2.5),
                 ), VolumePriceAlertSettings(
                     target = TickerGroupTargetSettings(TickerGroupSettings.AllTickers),
                     timeframe = Timeframe.MIN15,
-                    volumeXMedian = volumeXMedianNotFavoriteTickers,
+                    volumeXMedian = BigDecimal(4),
                 ),
                 VolumePriceAlertSettings(
                     target = TickerAlertTargetSettings("RIH5"),
@@ -87,7 +84,7 @@ fun main() {
                 ),
             )
             val myUserSettings = UserSettings(favoriteTickers, myAlertsSettings, notFavoriteTickersAlertsLimit)
-            alertSender.send(stockAlerts, now, myUserSettings)
+            alertSender.send(allAlerts, now, myUserSettings)
 
             // 1h
             val minute = Calendar.getInstance().get(Calendar.MINUTE)
