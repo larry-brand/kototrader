@@ -16,15 +16,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
-val DEBUG = true
+val DEBUG = false
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 private val notFavoriteTickersAlertsLimit = 3
 private val favoriteTickers = listOf("SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
+val logger = KotlinLogging.logger {}
 
 fun main() {
-    val logger = KotlinLogging.logger {}
-
     val bot = TradingTelegramBot()
     thread {
         try {
@@ -46,6 +45,9 @@ fun main() {
         val scheduler = Executors.newScheduledThreadPool(1)
         val task = Runnable {
             val now = LocalDateTime.now()
+            if (!checkSendTime()) {
+                return@Runnable
+            }
 
             // 15 min
             val allAlerts = StockAlertBuilder(stockTradingApi, Timeframe.MIN15, appCfg).build() +
@@ -110,7 +112,19 @@ fun main() {
         scheduler.scheduleAtFixedRate(task, delay.toLong(), 15 * 60, TimeUnit.SECONDS)
     }
 
+}
 
+private fun checkSendTime(): Boolean {
+    val calendar = Calendar.getInstance()
+    val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+    val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
+
+    // Проверяем, что текущее время находится в пределах с 10:00 до 24:00 и это будний день
+    if (!(currentHour in 10..24 && currentDay >= Calendar.MONDAY && currentDay <= Calendar.FRIDAY) && !immediateRun) {
+        logger.info { "Задача пропущена: не будний день или не в рабочие часы." }
+        return false
+    }
+    return true
 }
 
 data class UserSettings(
