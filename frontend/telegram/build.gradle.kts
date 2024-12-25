@@ -1,3 +1,12 @@
+plugins {
+    application
+    id("com.github.johnrengelman.shadow") version "7.1.1"
+}
+
+application {
+    mainClass.set("org.cryptolosers.telegrambot.TradingTelegramBotMainKt")
+}
+
 dependencies {
     implementation(project(":core:commons-general"))
     implementation(project(":core:history-service"))

@@ -13,17 +13,17 @@ class TradingTelegramBot() : TelegramLongPollingBot() {
 
     val chatIds = ConcurrentHashMap.newKeySet<String>()
     init {
-        chatIds.add(System.getProperty("botMyChatId"))
+        chatIds.add(System.getProperty("botMyChatId") ?: throw IllegalStateException("VM argument botMyChatId is not defined"))
     }
 
     // Возвращает имя бота
     override fun getBotUsername(): String {
-        return System.getProperty("botUsername")
+        return System.getProperty("botUsername") ?: throw IllegalStateException("VM argument botUsername is not defined")
     }
 
     // Возвращает токен бота
     override fun getBotToken(): String {
-        return System.getProperty("botToken")
+        return System.getProperty("botToken") ?: throw IllegalStateException("VM argument botToken is not defined")
     }
 
     // Обработка входящих сообщений

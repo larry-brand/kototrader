@@ -1,7 +1,7 @@
 {
   "profileName": "transaq",
   "terminalName": "Transaq",
-  "login": "INSERT_YOUR_LOGIN_e.g._FZTC10000A",
+  "login": "INSERT_YOUR_LOGIN",
   "password": "INSERT_YOUR_PASSWORD",
   "host": "tr1.finam.ru",
   "port": "3900"
