@@ -20,7 +20,7 @@ val DEBUG = false
 val immediateRun = DEBUG
 val forceNotCheckLastCandle = DEBUG
 private val notFavoriteTickersAlertsLimit = 3
-private val favoriteTickers = listOf("SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN")
+private val favoriteTickers = listOf("SBER", "SVCB", "BSPB", "BSPBP", "BTCUSDT", "TONUSDT", "UNKNOWN1")
 val logger = KotlinLogging.logger {}
 
 fun main() {
